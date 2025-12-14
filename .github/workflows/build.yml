@@ -1,19 +1,15 @@
 name: Build DoomMC
 
-on:
-  push:
-    branches: [main]
-  pull_request:
+on: [push, pull_request]
 
 jobs:
   build:
     runs-on: ubuntu-24.04
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Java 21
+      - name: Setup JDK 21
         uses: actions/setup-java@v4
         with:
           java-version: '21'
@@ -23,7 +19,7 @@ jobs:
         run: chmod +x mod/gradlew
 
       - name: Build DoomMC
-        run: ./mod/gradlew build
+        run: ./gradlew build
         working-directory: mod
 
       - name: Upload DoomMC JAR
