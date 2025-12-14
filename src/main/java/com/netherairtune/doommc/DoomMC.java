@@ -1,13 +1,10 @@
 package com.netherairtune.doommc;
 
 import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.text.Text;
 import net.minecraft.text.TextColor;
 
-@Environment(EnvType.CLIENT)
 public class DoomMC implements ClientModInitializer {
 
     @Override
