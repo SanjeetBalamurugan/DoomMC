@@ -15,10 +15,6 @@ repositories {
     maven { url 'https://maven.fabricmc.net/' }
 }
 
-loom {
-    splitEnvironmentSourceSets()
-}
-
 dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
     mappings "net.fabricmc:yarn:${project.minecraft_version}+build.${project.yarn_build}:v2"
