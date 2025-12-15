@@ -1,0 +1,5 @@
+{
+  "variants": {
+    "": { "model": "doommc:block/doom_block" }
+  }
+}
