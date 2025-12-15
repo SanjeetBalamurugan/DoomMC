@@ -24,7 +24,7 @@ jobs:
         run: ./gradlew genSources
 
       - name: Build DoomMC
-        run: ./gradlew build --no-daemon
+        run: ./gradlew build
 
       - name: Upload DoomMC JAR
         uses: actions/upload-artifact@v4
