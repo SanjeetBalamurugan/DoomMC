@@ -30,7 +30,7 @@ public class ModBlocks {
         Registry.register(
             Registries.ITEM,
             id,
-            new BlockItem(block, new Item.Settings().group(ItemGroup.MISC))
+            new BlockItem(block, new Item.Settings())
         );
 
         return block;
