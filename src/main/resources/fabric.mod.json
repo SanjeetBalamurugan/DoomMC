@@ -17,6 +17,8 @@
   "entrypoints": {
     "client": [
       "com.netherairtune.doommc.DoomMCClient"
+    ], "main": [
+      "com.netherairtune.doommc.DoomMC"
     ]
   },
   "depends": {

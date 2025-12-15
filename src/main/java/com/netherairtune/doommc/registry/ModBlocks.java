@@ -6,6 +6,7 @@ import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.Item;
+import net.minecraft.item.ItemGroup;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
 import net.minecraft.util.Identifier;
@@ -25,10 +26,11 @@ public class ModBlocks {
         Identifier id = new Identifier(DoomMC.MOD_ID, name);
 
         Registry.register(Registries.BLOCK, id, block);
+
         Registry.register(
             Registries.ITEM,
             id,
-            new BlockItem(block, new Item.Settings())
+            new BlockItem(block, new Item.Settings().group(ItemGroup.MISC))
         );
 
         return block;
