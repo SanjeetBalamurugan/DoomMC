@@ -12,16 +12,17 @@ public class DoomScreen extends Screen {
     }
 
     @Override
-    protected void init() {
-        int boxWidth = (int) (this.width * 0.75);
-        int boxHeight = boxWidth * 9 / 16;
-        int x = (this.width - boxWidth) / 2;
-        int y = (this.height - boxHeight) / 2;
+protected void init() {
+    int boxWidth = (int) (this.width * 0.75);
+    int boxHeight = boxWidth * 9 / 16;
+    int x = (this.width - boxWidth) / 2;
+    int y = (this.height - boxHeight) / 2;
 
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("X"), button -> this.onClose())
-                .dimensions(x + boxWidth - 20, y + 5, 15, 15)
-                .build());
-    }
+    this.addDrawableChild(ButtonWidget.builder(Text.literal("X"), button -> this.client.setScreen(null))
+            .dimensions(x + boxWidth - 20, y + 5, 15, 15)
+            .build());
+}
+
 
     @Override
     public boolean shouldPause() {
