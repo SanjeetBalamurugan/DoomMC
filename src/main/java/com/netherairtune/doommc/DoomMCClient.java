@@ -5,7 +5,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.text.Text;
 import net.minecraft.text.TextColor;
 
-public class DoomMC implements ClientModInitializer {
+public class DoomMCClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
