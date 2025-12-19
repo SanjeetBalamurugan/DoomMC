@@ -15,8 +15,6 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      
-
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
@@ -26,8 +24,17 @@ jobs:
       - name: Build DoomMC
         run: ./gradlew build
 
+      - name: Package sources as ZIP
+        run: zip -r build/libs/DoomMC-sources.zip build/generated/sources
+
       - name: Upload DoomMC JAR
         uses: actions/upload-artifact@v4
         with:
-          name: DoomMC
+          name: DoomMC-JAR
           path: build/libs/*.jar
+
+      - name: Upload DoomMC sources ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: DoomMC-sources
+          path: build/libs/DoomMC-sources.zip

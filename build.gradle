@@ -22,7 +22,29 @@ dependencies {
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 }
 
+def jniBuildDir = "$buildDir/jni"
+def jniLibName = "libdoom.dylib"
+
+task buildJNI(type: Exec) {
+    workingDir '../DOOM/linuxdoom-1.10'
+    commandLine 'cmake', '-S', '.', '-B', "${jniBuildDir}"
+    doLast {
+        exec {
+            workingDir "${jniBuildDir}"
+            commandLine 'cmake', '--build', '.', '--config', 'Release'
+        }
+    }
+}
+
+task copyJNILib(type: Copy) {
+    dependsOn buildJNI
+    from("${jniBuildDir}/lib/${jniLibName}")
+    into("${buildDir}/resources/main/native")
+}
+
 processResources {
+    dependsOn copyJNILib
+
     inputs.properties([
         mod_id: project.mod_id,
         mod_name: project.mod_name,
@@ -35,6 +57,7 @@ processResources {
         loader_version: project.loader_version,
         version: project.mod_version
     ])
+
     filesMatching("fabric.mod.json") { expand(inputs.properties) }
 }
 
