@@ -26,10 +26,10 @@ public class DoomJNI {
     public static native int getWidth();
     public static native int getHeight();
 
-    public static native void keyDown(int key);
-    public static native void keyUp(int key);
-    public static native void mouseMove(int x, int y);
-    public static native void mouseButton(int button, boolean pressed);
+    public static native void DOOM_KeyDown(int key);
+    public static native void DOOM_KeyUp(int key);
+    public static native void DOOM_MouseMove(int x, int y);
+    public static native void DOOM_MouseButton(int button, boolean pressed);
 
     public static final int DOOM_KEY_w = 'w';
     public static final int DOOM_KEY_a = 'a';

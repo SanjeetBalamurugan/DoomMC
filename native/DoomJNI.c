@@ -34,31 +34,19 @@ JNIEXPORT jintArray JNICALL Java_com_netherairtune_doommc_DoomJNI_getFramebuffer
 }
 
 JNIEXPORT jint JNICALL Java_com_netherairtune_doommc_DoomJNI_getWidth
-  (JNIEnv *env, jclass clazz) {
-    return SCREENWIDTH;
-}
+  (JNIEnv *env, jclass clazz) { return SCREENWIDTH; }
 
 JNIEXPORT jint JNICALL Java_com_netherairtune_doommc_DoomJNI_getHeight
-  (JNIEnv *env, jclass clazz) {
-    return SCREENHEIGHT;
-}
+  (JNIEnv *env, jclass clazz) { return SCREENHEIGHT; }
 
-JNIEXPORT void JNICALL Java_com_netherairtune_doommc_DoomJNI_keyDown
-  (JNIEnv *env, jclass clazz, jint key) {
-    DOOM_KeyDown(key);
-}
+JNIEXPORT void JNICALL Java_com_netherairtune_doommc_DoomJNI_DOOM_KeyDown
+  (JNIEnv *env, jclass clazz, jint key) { DOOM_KeyDown(key); }
 
-JNIEXPORT void JNICALL Java_com_netherairtune_doommc_DoomJNI_keyUp
-  (JNIEnv *env, jclass clazz, jint key) {
-    DOOM_KeyUp(key);
-}
+JNIEXPORT void JNICALL Java_com_netherairtune_doommc_DoomJNI_DOOM_KeyUp
+  (JNIEnv *env, jclass clazz, jint key) { DOOM_KeyUp(key); }
 
-JNIEXPORT void JNICALL Java_com_netherairtune_doommc_DoomJNI_mouseMove
-  (JNIEnv *env, jclass clazz, jint x, jint y) {
-    DOOM_MouseMove(x, y);
-}
+JNIEXPORT void JNICALL Java_com_netherairtune_doommc_DoomJNI_DOOM_MouseMove
+  (JNIEnv *env, jclass clazz, jint x, jint y) { DOOM_MouseMove(x, y); }
 
-JNIEXPORT void JNICALL Java_com_netherairtune_doommc_DoomJNI_mouseButton
-  (JNIEnv *env, jclass clazz, jint button, jboolean pressed) {
-    DOOM_MouseButton(button, pressed);
-}
+JNIEXPORT void JNICALL Java_com_netherairtune_doommc_DoomJNI_DOOM_MouseButton
+  (JNIEnv *env, jclass clazz, jint button, jboolean pressed) { DOOM_MouseButton(button, pressed); }
