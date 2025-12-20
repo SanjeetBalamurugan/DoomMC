@@ -34,22 +34,20 @@ def jniLibName = os.isWindows() ? "doomjni.dll" :
                  os.isMacOsX()  ? "libdoomjni.dylib" :
                                  "libdoomjni.so"
 
-tasks.register('buildJNI', Exec) {
+tasks.register('configureJNI', Exec) {
     workingDir = nativeCMakeDir
-
     commandLine "cmake",
             "-S", ".",
             "-B", jniBuildDir.absolutePath,
             "-DCMAKE_BUILD_TYPE=Release"
+}
 
-    doLast {
-        exec {
-            workingDir = nativeCMakeDir
-            commandLine "cmake",
-                    "--build", jniBuildDir.absolutePath,
-                    "--config", "Release"
-        }
-    }
+tasks.register('buildJNI', Exec) {
+    dependsOn 'configureJNI'
+    workingDir = nativeCMakeDir
+    commandLine "cmake",
+            "--build", jniBuildDir.absolutePath,
+            "--config", "Release"
 }
 
 tasks.register('copyJNILib', Copy) {
