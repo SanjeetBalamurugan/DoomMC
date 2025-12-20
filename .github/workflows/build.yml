@@ -8,13 +8,13 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      with:
-              submodules: 'recursive'
-              fetch-depth: 0
+        with:
+          submodules: recursive
+          fetch-depth: 0
 
       - name: Install CMake 4.2
         run: |
-          wget https://github.com/Kitware/CMake/releases/download/v4.2.0/cmake-4.2.0-linux-x86_64.sh
+          wget github.com
           sudo mkdir -p /opt/cmake
           sudo sh cmake-4.2.0-linux-x86_64.sh --prefix=/opt/cmake --skip-license
           sudo ln -sf /opt/cmake/bin/cmake /usr/local/bin/cmake
@@ -32,10 +32,10 @@ jobs:
       - name: Generate sources
         run: ./gradlew genSources
         
-        - name: Package sources as ZIP
+      - name: Package sources as ZIP
         run: zip -r build/libs/DoomMC-sources.zip build/generated/sources
         
-        - name: Upload DoomMC sources ZIP
+      - name: Upload DoomMC sources ZIP
         uses: actions/upload-artifact@v4
         with:
           name: DoomMC-sources
