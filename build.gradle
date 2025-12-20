@@ -22,28 +22,50 @@ dependencies {
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 }
 
-def jniBuildDir = "$buildDir/jni"
-def jniLibName = "libdoom.dylib"
+/* =======================
+   JNI CONFIG
+   ======================= */
 
-task buildJNI(type: Exec) {
-    workingDir '../DOOM/linuxdoom-1.10'
-    commandLine 'cmake', '-S', '.', '-B', "${jniBuildDir}"
+def jniBuildDir = file("$buildDir/jni")
+def nativeCMakeDir = file("native")
+
+def os = org.gradle.internal.os.OperatingSystem.current()
+def jniLibName = os.isWindows() ? "doomjni.dll" :
+                 os.isMacOsX()  ? "libdoomjni.dylib" :
+                                 "libdoomjni.so"
+
+tasks.register('buildJNI', Exec) {
+    workingDir = nativeCMakeDir
+
+    commandLine "cmake",
+            "-S", ".",
+            "-B", jniBuildDir.absolutePath,
+            "-DCMAKE_BUILD_TYPE=Release"
+
     doLast {
         exec {
-            workingDir "${jniBuildDir}"
-            commandLine 'cmake', '--build', '.', '--config', 'Release'
+            workingDir = nativeCMakeDir
+            commandLine "cmake",
+                    "--build", jniBuildDir.absolutePath,
+                    "--config", "Release"
         }
     }
 }
 
-task copyJNILib(type: Copy) {
-    dependsOn buildJNI
-    from("${jniBuildDir}/lib/${jniLibName}")
-    into("${buildDir}/resources/main/native")
+tasks.register('copyJNILib', Copy) {
+    dependsOn 'buildJNI'
+
+    from {
+        fileTree(jniBuildDir).matching {
+            include "**/${jniLibName}"
+        }
+    }
+
+    into "$buildDir/resources/main/native"
 }
 
 processResources {
-    dependsOn copyJNILib
+    dependsOn 'copyJNILib'
 
     inputs.properties([
         mod_id: project.mod_id,
@@ -58,7 +80,9 @@ processResources {
         version: project.mod_version
     ])
 
-    filesMatching("fabric.mod.json") { expand(inputs.properties) }
+    filesMatching("fabric.mod.json") {
+        expand(inputs.properties)
+    }
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -72,9 +96,8 @@ java {
 }
 
 jar {
-    inputs.property "archivesName", project.base.archivesName
     from("LICENSE") {
-        rename { "${it}_${inputs.properties.archivesName}" }
+        rename { "${it}_${archivesBaseName.get()}" }
     }
 }
 
@@ -84,8 +107,5 @@ publishing {
             artifactId = project.archives_base_name
             from components.java
         }
-    }
-    repositories {
-        // Add your Maven repositories here if needed
     }
 }
