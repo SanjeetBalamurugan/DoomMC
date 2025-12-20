@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 4.2)
+cmake_minimum_required(VERSION 3.10)
 project(DoomJNI C)
 
 set(CMAKE_C_STANDARD 99)
@@ -6,12 +6,10 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 find_package(JNI REQUIRED)
 include_directories(${JNI_INCLUDE_DIRS})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../DOOM/linuxdoom-1.10)
 
-# Add DOOM subdirectory
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/DOOM ${CMAKE_BINARY_DIR}/doom_build)
-
-# Include DOOM headers
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/DOOM/linuxdoom-1.10)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../DOOM/linuxdoom-1.10 
+                 ${CMAKE_BINARY_DIR}/doom_build)
 
 # Build JNI library
 add_library(doomjni SHARED DoomJNI.c)
