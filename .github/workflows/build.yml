@@ -39,7 +39,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: DoomMC-sources
-          path: build/libs/DoomMC-sources.zip
+          path: build/DoomMC-sources.zip
 
       - name: Build DoomMC
         run: ./gradlew build
