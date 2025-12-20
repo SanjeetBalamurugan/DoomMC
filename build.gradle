@@ -22,7 +22,7 @@ dependencies {
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 }
 
-/* =======================°
+/* =======================
    JNI CONFIG
    ======================= */
 
@@ -52,19 +52,16 @@ tasks.register('buildJNI', Exec) {
 
 tasks.register('copyJNILib', Copy) {
     dependsOn 'buildJNI'
-
     from {
         fileTree(jniBuildDir).matching {
             include "**/${jniLibName}"
         }
     }
-
     into "$buildDir/resources/main/native"
 }
 
 processResources {
     dependsOn 'copyJNILib'
-
     inputs.properties([
         mod_id: project.mod_id,
         mod_name: project.mod_name,
@@ -94,8 +91,11 @@ java {
 }
 
 jar {
-    from("LICENSE") {
-        rename { "${it}_${archivesBaseName.get()}" }
+    // Fixed: changed archivesBaseName.get() to base.archivesName.get()
+    from(rootProject.file("LICENSE")) {
+        rename { String fileName -> 
+            "${fileName}_${base.archivesName.get()}" 
+        }
     }
 }
 
