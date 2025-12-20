@@ -12,7 +12,7 @@ base {
 
 repositories {
     mavenCentral()
-    maven { url 'https://maven.fabricmc.net/' }
+    maven { url 'maven.fabricmc.net' }
 }
 
 dependencies {
@@ -22,40 +22,26 @@ dependencies {
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 }
 
-/* =======================
-   JNI CONFIG
-   ======================= */
-
 def jniBuildDir = file("$buildDir/jni")
 def nativeCMakeDir = file("native")
-
 def os = org.gradle.internal.os.OperatingSystem.current()
-def jniLibName = os.isWindows() ? "doomjni.dll" :
-                 os.isMacOsX()  ? "libdoomjni.dylib" :
-                                 "libdoomjni.so"
+def jniLibName = os.isWindows() ? "doomjni.dll" : os.isMacOsX() ? "libdoomjni.dylib" : "libdoomjni.so"
 
 tasks.register('configureJNI', Exec) {
     workingDir = nativeCMakeDir
-    commandLine "cmake",
-            "-S", ".",
-            "-B", jniBuildDir.absolutePath,
-            "-DCMAKE_BUILD_TYPE=Release"
+    commandLine "cmake", "-S", ".", "-B", jniBuildDir.absolutePath, "-DCMAKE_BUILD_TYPE=Release"
 }
 
 tasks.register('buildJNI', Exec) {
     dependsOn 'configureJNI'
     workingDir = nativeCMakeDir
-    commandLine "cmake",
-            "--build", jniBuildDir.absolutePath,
-            "--config", "Release"
+    commandLine "cmake", "--build", jniBuildDir.absolutePath, "--config", "Release"
 }
 
 tasks.register('copyJNILib', Copy) {
     dependsOn 'buildJNI'
     from {
-        fileTree(jniBuildDir).matching {
-            include "**/${jniLibName}"
-        }
+        fileTree(jniBuildDir).matching { include "**/${jniLibName}" }
     }
     into "$buildDir/resources/main/native"
 }
@@ -74,10 +60,7 @@ processResources {
         loader_version: project.loader_version,
         version: project.mod_version
     ])
-
-    filesMatching("fabric.mod.json") {
-        expand(inputs.properties)
-    }
+    filesMatching("fabric.mod.json") { expand(inputs.properties) }
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -91,11 +74,12 @@ java {
 }
 
 jar {
-    // Fixed: changed archivesBaseName.get() to base.archivesName.get()
+    dependsOn 'copyJNILib'
+    from("$buildDir/resources/main/native") {
+        into("native")
+    }
     from(rootProject.file("LICENSE")) {
-        rename { String fileName -> 
-            "${fileName}_${base.archivesName.get()}" 
-        }
+        rename { String fileName -> "${fileName}_${base.archivesName.get()}" }
     }
 }
 

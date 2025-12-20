@@ -1,26 +1,33 @@
 package com.netherairtune.doommc;
 
+import java.io.File;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 
 public class DoomJNI {
-
     private static boolean loaded = false;
 
     static {
         try {
             String libName = System.mapLibraryName("doomjni");
-            InputStream libStream = DoomJNI.class.getResourceAsStream("/native/" + libName);
-            if (libStream == null) {
-                throw new RuntimeException("JNI library not found in resources: /native/" + libName);
+            File externalLib = new File(new File("."), "doommc/" + libName);
+            
+            if (externalLib.exists()) {
+                System.load(externalLib.getAbsolutePath());
+                loaded = true;
+            } else {
+                InputStream libStream = DoomJNI.class.getResourceAsStream("/native/" + libName);
+                if (libStream == null) {
+                    throw new RuntimeException("Library not found in /doommc/ or JAR resources.");
+                }
+                Path temp = Files.createTempFile("doomjni", libName);
+                temp.toFile().deleteOnExit();
+                Files.copy(libStream, temp, StandardCopyOption.REPLACE_EXISTING);
+                System.load(temp.toAbsolutePath().toString());
+                loaded = true;
             }
-            Path temp = Files.createTempFile("doomjni", libName);
-            temp.toFile().deleteOnExit();
-            Files.copy(libStream, temp, StandardCopyOption.REPLACE_EXISTING);
-            System.load(temp.toAbsolutePath().toString());
-            loaded = true;
         } catch (Exception e) {
             e.printStackTrace();
             throw new RuntimeException("Failed to load Doom JNI library", e);
@@ -33,7 +40,6 @@ public class DoomJNI {
     public static native int getWidth();
     public static native int getHeight();
     public static native boolean isPlayerReady();
-
     public static native void keyDown(int key);
     public static native void keyUp(int key);
     public static native void mouseMove(int x, int y);
@@ -65,7 +71,6 @@ public class DoomJNI {
     public static final int KEY_RSHIFT = 0x80 + 0x36;
     public static final int KEY_RCTRL = 0x80 + 0x1d;
     public static final int KEY_RALT = 0x80 + 0x38;
-    
     public static final int MOUSE_LEFT = 1;
     public static final int MOUSE_MIDDLE = 2;
     public static final int MOUSE_RIGHT = 4;
