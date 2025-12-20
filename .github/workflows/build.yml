@@ -32,8 +32,8 @@ jobs:
       - name: Generate sources
         run: ./gradlew genSources
         
-      - name: Package sources as ZIP
-        run: zip -r build/libs/DoomMC-sources.zip build/generated/sources
+      - name: Package .gradle as ZIP
+        run: zip -r build/DoomMC-sources.zip build
         
       - name: Upload DoomMC sources ZIP
         uses: actions/upload-artifact@v4
