@@ -29,14 +29,19 @@ def jniLibName = os.isWindows() ? "doomjni.dll" : os.isMacOsX() ? "libdoomjni.dy
 
 tasks.register('configureJNI', Exec) {
     workingDir = nativeCMakeDir
-    commandLine "cmake", "-S", ".", "-B", jniBuildDir.absolutePath, "-DCMAKE_BUILD_TYPE=Release"
+    def javaHome = System.getenv("JAVA_HOME") ?: System.getProperty("java.home")
+    
+    commandLine "cmake",
+            "-S", ".",
+            "-B", jniBuildDir.absolutePath,
+            "-DCMAKE_BUILD_TYPE=Release",
+            "-DJAVA_HOME=${javaHome}",
+            "-DJAVA_INCLUDE_PATH=${javaHome}/include",
+            "-DJAVA_INCLUDE_PATH2=${javaHome}/include/linux",
+            "-DJAVA_AWT_LIBRARY=${javaHome}/lib/libjawt.so",
+            "-DJAVA_JVM_LIBRARY=${javaHome}/lib/server/libjvm.so"
 }
 
-tasks.register('buildJNI', Exec) {
-    dependsOn 'configureJNI'
-    workingDir = nativeCMakeDir
-    commandLine "cmake", "--build", jniBuildDir.absolutePath, "--config", "Release"
-}
 
 tasks.register('copyJNILib', Copy) {
     dependsOn 'buildJNI'
