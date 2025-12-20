@@ -22,15 +22,35 @@ dependencies {
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 }
 
-def jniBuildDir = "$buildDir/jni"
-def jniLibName = "libdoom.dylib"
+def nativeBuildDir = "${buildDir}/native"
+def doomLibDir = "${buildDir}/doom_lib"
 
-task buildJNI(type: Exec) {
-    workingDir '../DOOM/linuxdoom-1.10'
-    commandLine 'cmake', '-S', '.', '-B', "${jniBuildDir}"
+task buildDoomLib(type: Exec) {
+    workingDir 'DOOM'
+    commandLine 'mkdir', '-p', "${doomLibDir}"
     doLast {
         exec {
-            workingDir "${jniBuildDir}"
+            workingDir 'DOOM'
+            commandLine 'cmake', '-S', 'linuxdoom-1.10', '-B', "${doomLibDir}"
+        }
+        exec {
+            workingDir "${doomLibDir}"
+            commandLine 'cmake', '--build', '.', '--config', 'Release'
+        }
+    }
+}
+
+task buildJNI(type: Exec) {
+    dependsOn buildDoomLib
+    workingDir 'native'
+    commandLine 'mkdir', '-p', "${nativeBuildDir}"
+    doLast {
+        exec {
+            workingDir 'native'
+            commandLine 'cmake', '-S', '.', '-B', "${nativeBuildDir}"
+        }
+        exec {
+            workingDir "${nativeBuildDir}"
             commandLine 'cmake', '--build', '.', '--config', 'Release'
         }
     }
@@ -38,8 +58,20 @@ task buildJNI(type: Exec) {
 
 task copyJNILib(type: Copy) {
     dependsOn buildJNI
-    from("${jniBuildDir}/lib/${jniLibName}")
+    from("${nativeBuildDir}/lib") {
+        include "libdoomjni.*"
+    }
     into("${buildDir}/resources/main/native")
+    rename { filename ->
+        if (filename.endsWith('.dylib')) {
+            return 'libdoomjni.dylib'
+        } else if (filename.endsWith('.so')) {
+            return 'libdoomjni.so'
+        } else if (filename.endsWith('.dll')) {
+            return 'doomjni.dll'
+        }
+        return filename
+    }
 }
 
 processResources {
@@ -86,6 +118,5 @@ publishing {
         }
     }
     repositories {
-        // Add your Maven repositories here if needed
     }
 }

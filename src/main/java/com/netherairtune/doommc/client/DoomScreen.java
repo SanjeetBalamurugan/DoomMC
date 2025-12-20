@@ -2,48 +2,101 @@ package com.netherairtune.doommc.client;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.netherairtune.doommc.DoomJNI;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.NativeImageBackedTexture;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.Text;
+import net.minecraft.util.Identifier;
 import org.lwjgl.glfw.GLFW;
 
 public class DoomScreen extends Screen {
 
-    private final NativeImage image;
-    private final NativeImageBackedTexture texture;
+    private NativeImage image;
+    private NativeImageBackedTexture texture;
+    private Identifier textureId;
     private final int doomWidth = DoomJNI.getWidth();
     private final int doomHeight = DoomJNI.getHeight();
     private final int scale = 2;
+    private int waitTicks = 0;
+    private boolean playerReady = false;
+    private boolean initialized = false;
 
     public DoomScreen() {
         super(Text.literal("DoomMC"));
-        image = new NativeImage(doomWidth, doomHeight, false);
-        texture = new NativeImageBackedTexture(image);
     }
 
     @Override
     protected void init() {
+        super.init();
+        
+        if (!initialized) {
+            try {
+                String[] args = {
+                    "doom",
+                    "-iwad", "doom.wad",
+                    "-warp", "1", "1",
+                    "-skill", "3"
+                };
+                DoomJNI.doomInit(args);
+                initialized = true;
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        
+        if (image == null) {
+            image = new NativeImage(doomWidth, doomHeight, false);
+            texture = new NativeImageBackedTexture(image);
+            textureId = this.client.getTextureManager().registerDynamicTexture("doom_screen", texture);
+        }
+        
         int boxWidth = doomWidth * scale;
         int boxHeight = doomHeight * scale;
         int x = (this.width - boxWidth) / 2;
         int y = (this.height - boxHeight) / 2;
 
-        addDrawableChild(ButtonWidget.builder(Text.literal("X"), button -> this.client.setScreen(null))
-                .dimensions(x + boxWidth - 20, y + 5, 15, 15)
-                .build());
+        this.addDrawableChild(
+            ButtonWidget.builder(Text.literal("X"), button -> {
+                if (this.client != null) {
+                    this.client.setScreen(null);
+                }
+            })
+            .dimensions(x + boxWidth - 20, y + 5, 15, 15)
+            .build()
+        );
     }
 
     @Override
-    public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        DoomJNI.doomStep();
-        int[] framebuffer = DoomJNI.getFramebuffer();
-        for (int y = 0; y < doomHeight; y++)
-            for (int x = 0; x < doomWidth; x++)
-                image.setPixelColor(x, y, framebuffer[y * doomWidth + x]);
-
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        this.renderBackground(context, mouseX, mouseY, delta);
+        
+        if (!playerReady) {
+            if (waitTicks < 35) {
+                DoomJNI.doomStep();
+                waitTicks++;
+                playerReady = DoomJNI.isPlayerReady();
+            } else {
+                playerReady = true;
+            }
+        } else {
+            DoomJNI.doomStep();
+        }
+        
+        byte[] framebuffer = DoomJNI.getFramebuffer();
+        for (int y = 0; y < doomHeight; y++) {
+            for (int x = 0; x < doomWidth; x++) {
+                int idx = (y * doomWidth + x) * 4;
+                int r = framebuffer[idx] & 0xFF;
+                int g = framebuffer[idx + 1] & 0xFF;
+                int b = framebuffer[idx + 2] & 0xFF;
+                int a = framebuffer[idx + 3] & 0xFF;
+                int argb = (a << 24) | (b << 16) | (g << 8) | r;
+                image.setColor(x, y, argb);
+            }
+        }
+        
         texture.upload();
 
         int boxWidth = doomWidth * scale;
@@ -51,53 +104,77 @@ public class DoomScreen extends Screen {
         int x = (this.width - boxWidth) / 2;
         int y = (this.height - boxHeight) / 2;
 
-        RenderSystem.enableTexture();
-        drawTexture(matrices, texture.getTexture(), x, y, 0, 0, boxWidth, boxHeight, doomWidth, doomHeight);
+        RenderSystem.setShaderTexture(0, textureId);
+        context.drawTexture(textureId, x, y, 0, 0, boxWidth, boxHeight, doomWidth, doomHeight);
 
-        super.render(matrices, mouseX, mouseY, delta);
+        super.render(context, mouseX, mouseY, delta);
     }
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        DoomJNI.DOOM_KeyDown(mapKey(keyCode));
+        if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
+            if (this.client != null) {
+                this.client.setScreen(null);
+            }
+            return true;
+        }
+        DoomJNI.keyDown(mapKey(keyCode));
         return true;
     }
 
     @Override
     public boolean keyReleased(int keyCode, int scanCode, int modifiers) {
-        DoomJNI.DOOM_KeyUp(mapKey(keyCode));
+        DoomJNI.keyUp(mapKey(keyCode));
         return true;
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        DoomJNI.DOOM_MouseButton(button + 1, true);
-        return true;
+        DoomJNI.mouseButton(button + 1, true);
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        DoomJNI.DOOM_MouseButton(button + 1, false);
-        return true;
+        DoomJNI.mouseButton(button + 1, false);
+        return super.mouseReleased(mouseX, mouseY, button);
     }
 
     @Override
-    public void onMouseMove(double mouseX, double mouseY) {
-        DoomJNI.DOOM_MouseMove((int) mouseX, (int) mouseY);
+    public void mouseMoved(double mouseX, double mouseY) {
+        DoomJNI.mouseMove((int)mouseX / 10, (int)mouseY / 10);
     }
 
     private int mapKey(int key) {
         return switch (key) {
-            case GLFW.GLFW_KEY_W -> DoomJNI.DOOM_KEY_w;
-            case GLFW.GLFW_KEY_A -> DoomJNI.DOOM_KEY_a;
-            case GLFW.GLFW_KEY_S -> DoomJNI.DOOM_KEY_s;
-            case GLFW.GLFW_KEY_D -> DoomJNI.DOOM_KEY_d;
-            case GLFW.GLFW_KEY_SPACE -> DoomJNI.DOOM_KEY_SPACE;
-            case GLFW.GLFW_KEY_UP -> DoomJNI.DOOM_KEY_UPARROW;
-            case GLFW.GLFW_KEY_DOWN -> DoomJNI.DOOM_KEY_DOWNARROW;
-            case GLFW.GLFW_KEY_LEFT -> DoomJNI.DOOM_KEY_LEFTARROW;
-            case GLFW.GLFW_KEY_RIGHT -> DoomJNI.DOOM_KEY_RIGHTARROW;
+            case GLFW.GLFW_KEY_W -> 'w';
+            case GLFW.GLFW_KEY_A -> 'a';
+            case GLFW.GLFW_KEY_S -> 's';
+            case GLFW.GLFW_KEY_D -> 'd';
+            case GLFW.GLFW_KEY_SPACE -> ' ';
+            case GLFW.GLFW_KEY_UP -> DoomJNI.KEY_UPARROW;
+            case GLFW.GLFW_KEY_DOWN -> DoomJNI.KEY_DOWNARROW;
+            case GLFW.GLFW_KEY_LEFT -> DoomJNI.KEY_LEFTARROW;
+            case GLFW.GLFW_KEY_RIGHT -> DoomJNI.KEY_RIGHTARROW;
+            case GLFW.GLFW_KEY_ENTER -> DoomJNI.KEY_ENTER;
+            case GLFW.GLFW_KEY_LEFT_CONTROL, GLFW.GLFW_KEY_RIGHT_CONTROL -> DoomJNI.KEY_RCTRL;
+            case GLFW.GLFW_KEY_LEFT_ALT, GLFW.GLFW_KEY_RIGHT_ALT -> DoomJNI.KEY_RALT;
+            case GLFW.GLFW_KEY_LEFT_SHIFT, GLFW.GLFW_KEY_RIGHT_SHIFT -> DoomJNI.KEY_RSHIFT;
             default -> key;
         };
+    }
+
+    @Override
+    public void close() {
+        if (textureId != null && this.client != null) {
+            this.client.getTextureManager().destroyTexture(textureId);
+        }
+        if (texture != null) {
+            texture.close();
+        }
+        if (image != null) {
+            image.close();
+        }
+        super.close();
     }
 }

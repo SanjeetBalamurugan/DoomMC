@@ -6,13 +6,19 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 find_package(JNI REQUIRED)
 include_directories(${JNI_INCLUDE_DIRS})
-include_directories(../DOOM/linuxdoom-1.10)
+include_directories(${CMAKE_SOURCE_DIR}/../DOOM/linuxdoom-1.10)
 
-file(GLOB SOURCES "*.c")
-list(APPEND SOURCES "../DOOM/linuxdoom-1.10/doom_lib.c")
+add_subdirectory(${CMAKE_SOURCE_DIR}/../DOOM/linuxdoom-1.10 ${CMAKE_BINARY_DIR}/doom_build)
 
-add_library(doomjni SHARED ${SOURCES})
-target_link_libraries(doomjni ${JNI_LIBRARIES} m)
+add_library(doomjni SHARED DoomJNI.c)
+
+target_link_libraries(doomjni 
+    doomheadless
+    ${JNI_LIBRARIES} 
+    m
+)
+
 set_target_properties(doomjni PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+    OUTPUT_NAME "doomjni"
 )
