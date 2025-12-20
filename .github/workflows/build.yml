@@ -8,6 +8,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      with:
+              submodules: 'recursive'
+              fetch-depth: 0
 
       - name: Install CMake 4.2
         run: |
@@ -28,21 +31,21 @@ jobs:
 
       - name: Generate sources
         run: ./gradlew genSources
+        
+        - name: Package sources as ZIP
+        run: zip -r build/libs/DoomMC-sources.zip build/generated/sources
+        
+        - name: Upload DoomMC sources ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: DoomMC-sources
+          path: build/libs/DoomMC-sources.zip
 
       - name: Build DoomMC
         run: ./gradlew build
-
-      - name: Package sources as ZIP
-        run: zip -r build/libs/DoomMC-sources.zip build/generated/sources
 
       - name: Upload DoomMC JAR
         uses: actions/upload-artifact@v4
         with:
           name: DoomMC-JAR
           path: build/libs/*.jar
-
-      - name: Upload DoomMC sources ZIP
-        uses: actions/upload-artifact@v4
-        with:
-          name: DoomMC-sources
-          path: build/libs/DoomMC-sources.zip
