@@ -25,10 +25,9 @@ dependencies {
 def nativeBuildDir = "${buildDir}/native"
 def doomLibDir = "${buildDir}/doom_lib"
 
-task buildDoomLib(type: Exec) {
-    workingDir 'DOOM'
-    commandLine 'mkdir', '-p', "${doomLibDir}"
+task buildDoomLib {
     doLast {
+        mkdir(doomLibDir)
         exec {
             workingDir 'DOOM'
             commandLine 'cmake', '-S', 'linuxdoom-1.10', '-B', "${doomLibDir}"
@@ -40,11 +39,10 @@ task buildDoomLib(type: Exec) {
     }
 }
 
-task buildJNI(type: Exec) {
+task buildJNI {
     dependsOn buildDoomLib
-    workingDir 'native'
-    commandLine 'mkdir', '-p', "${nativeBuildDir}"
     doLast {
+        mkdir(nativeBuildDir)
         exec {
             workingDir 'native'
             commandLine 'cmake', '-S', '.', '-B', "${nativeBuildDir}"
