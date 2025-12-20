@@ -27,7 +27,7 @@ def nativeCMakeDir = file("native")
 def os = org.gradle.internal.os.OperatingSystem.current()
 def jniLibName = os.isWindows() ? "doomjni.dll" : os.isMacOsX() ? "libdoomjni.dylib" : "libdoomjni.so"
 
-tasks.register('configureJNI', Exec) {
+def configureJNI = tasks.register('configureJNI', Exec) {
     workingDir = nativeCMakeDir
     def javaHome = System.getenv("JAVA_HOME") ?: System.getProperty("java.home")
     
@@ -42,9 +42,14 @@ tasks.register('configureJNI', Exec) {
             "-DJAVA_JVM_LIBRARY=${javaHome}/lib/server/libjvm.so"
 }
 
+def buildJNI = tasks.register('buildJNI', Exec) {
+    dependsOn configureJNI
+    workingDir = nativeCMakeDir
+    commandLine "cmake", "--build", jniBuildDir.absolutePath, "--config", "Release"
+}
 
 tasks.register('copyJNILib', Copy) {
-    dependsOn 'buildJNI'
+    dependsOn buildJNI
     from {
         fileTree(jniBuildDir).matching { include "**/${jniLibName}" }
     }
