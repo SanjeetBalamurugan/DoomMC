@@ -23,16 +23,12 @@ dependencies {
 }
 
 /* =======================
-   JNI CONFIG
+   JNI CONFIG (Linux aarch64)
    ======================= */
 
 def jniBuildDir = file("$buildDir/jni")
 def nativeCMakeDir = file("native")
-
-def os = org.gradle.internal.os.OperatingSystem.current()
-def jniLibName = os.isWindows() ? "doomjni.dll" :
-                 os.isMacOsX()  ? "libdoomjni.dylib" :
-                                 "libdoomjni.so"
+def jniLibName = "libdoomjni.so"
 
 tasks.register('configureJNI', Exec) {
     workingDir = nativeCMakeDir
@@ -40,15 +36,11 @@ tasks.register('configureJNI', Exec) {
             "-S", ".",
             "-B", jniBuildDir.absolutePath,
             "-DCMAKE_BUILD_TYPE=Release",
-            "-DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_LATEST_HOME/build/cmake/android.toolchain.cmake",
-            "-DANDROID_ABI=arm64-v8a",
-            "-DANDROID_PLATFORM=android-24",
-            "-DCMAKE_BUILD_TYPE=Release"
+            "-DCMAKE_TOOLCHAIN_FILE=${nativeCMakeDir}/toolchains/linux-aarch64.cmake"
 }
 
 tasks.register('buildJNI', Exec) {
     dependsOn 'configureJNI'
-    workingDir = nativeCMakeDir
     commandLine "cmake",
             "--build", jniBuildDir.absolutePath,
             "--config", "Release"
@@ -61,11 +53,12 @@ tasks.register('copyJNILib', Copy) {
             include "**/${jniLibName}"
         }
     }
-    into "$buildDir/resources/main/native"
+    into "$buildDir/resources/main/native/linux-aarch64"
 }
 
 processResources {
     dependsOn 'copyJNILib'
+    
     inputs.properties([
         mod_id: project.mod_id,
         mod_name: project.mod_name,
@@ -81,33 +74,5 @@ processResources {
 
     filesMatching("fabric.mod.json") {
         expand(inputs.properties)
-    }
-}
-
-tasks.withType(JavaCompile).configureEach {
-    it.options.release = project.java_version.toInteger()
-}
-
-java {
-    withSourcesJar()
-    sourceCompatibility = JavaVersion.toVersion(project.java_version)
-    targetCompatibility = JavaVersion.toVersion(project.java_version)
-}
-
-jar {
-    // Fixed: changed archivesBaseName.get() to base.archivesName.get()
-    from(rootProject.file("LICENSE")) {
-        rename { String fileName -> 
-            "${fileName}_${base.archivesName.get()}" 
-        }
-    }
-}
-
-publishing {
-    publications {
-        create("mavenJava", MavenPublication) {
-            artifactId = project.archives_base_name
-            from components.java
-        }
     }
 }
