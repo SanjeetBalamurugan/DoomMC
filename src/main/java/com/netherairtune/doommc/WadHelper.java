@@ -17,12 +17,7 @@ public class WadHelper {
         if (!doomDir.exists()) {
             doomDir.mkdirs();
         }
-        
-        System.out.println("[DoomMC] IWAD path: " + wadFile.getAbsolutePath());
-        System.out.println("[DoomMC] IWAD exists: " + wadFile.exists());
-        System.out.println("[DoomMC] IWAD size: " + wadFile.length());
 
-        
         return new File(doomDir, WAD_FILENAME);
     }
     

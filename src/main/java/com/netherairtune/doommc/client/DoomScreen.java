@@ -70,6 +70,10 @@ public class DoomScreen extends Screen {
         if (!initialized) {
             try {
                 File wadFile = WadHelper.getWadFile();
+                System.out.println("[DoomMC] IWAD path: " + wadFile.getAbsolutePath()); // just for debug 
+                System.out.println("[DoomMC] IWAD exists: " + wadFile.exists());
+                System.out.println("[DoomMC] IWAD size: " + wadFile.length());
+                
                 String[] args = {
                     "doomjni",
                     "-iwad", wadFile.getAbsolutePath(),
