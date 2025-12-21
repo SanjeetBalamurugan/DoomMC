@@ -46,11 +46,20 @@ public class DoomJNI {
 
     // UPDATE: it's still not working but lemme check this change
     private static boolean isAndroid() {
-        String vendor = System.getProperty("java.vendor");
-        String runtime = System.getProperty("java.runtime.name");
+        String specVendor = System.getProperty("java.specification.vendor");
+        if (specVendor != null && specVendor.contains("The Android Project")) {
+              return true;
+         }
+         
+    String vmName = System.getProperty("java.vm.name", "").toLowerCase();
+    String runtimeName = System.getProperty("java.runtime.name", "").toLowerCase();
+    String vendor = System.getProperty("java.vendor", "").toLowerCase();
 
-        return (vendor != null && vendor.toLowerCase().contains("android")) || 
-               (runtime != null && runtime.toLowerCase().contains("android"));
+    return vmName.contains("android") || 
+           runtimeName.contains("android") || 
+           vendor.contains("android") ||
+           vendor.contains("pojav"); // just for now I am gonna check for pojav launcher specifically and TODO: make a config file so that the users can specify the launcher they are using
+           //but why the fuck i need to care for Android?
     }
 
 
