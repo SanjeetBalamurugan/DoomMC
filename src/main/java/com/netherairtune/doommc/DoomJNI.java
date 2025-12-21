@@ -44,9 +44,13 @@ public class DoomJNI {
         }
     }
 
+    // UPDATE: it's still not working but lemme check this change
     private static boolean isAndroid() {
-          String runtime = System.getProperty("java.runtime.name"); // ok pojavlauncher why it's not fucking working for you
-          return runtime != null && runtime.toLowerCase().contains("android");
+        String vendor = System.getProperty("java.vendor");
+        String runtime = System.getProperty("java.runtime.name");
+
+        return (vendor != null && vendor.toLowerCase().contains("android")) || 
+               (runtime != null && runtime.toLowerCase().contains("android"));
     }
 
 
