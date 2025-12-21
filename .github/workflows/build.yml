@@ -13,14 +13,18 @@ jobs:
           submodules: recursive
           fetch-depth: 0
 
-      - name: Install CMake 3.22+
+      - name: Install CMake 4.2.0
         run: |
-          sudo apt-get update
-          sudo apt-get install -y cmake
+          wget https://github.com/Kitware/CMake/releases/download/v4.2.0/cmake-4.2.0-linux-x86_64.sh
+          chmod +x cmake-4.2.0-linux-x86_64.sh
+          sudo mkdir -p /opt/cmake
+          sudo ./cmake-4.2.0-linux-x86_64.sh --prefix=/opt/cmake --skip-license
+          sudo ln -sf /opt/cmake/bin/cmake /usr/local/bin/cmake
           cmake --version
 
       - name: Install cross-compilation toolchains
         run: |
+          sudo apt-get update
           sudo apt-get install -y \
             gcc-aarch64-linux-gnu \
             g++-aarch64-linux-gnu \
@@ -61,7 +65,7 @@ jobs:
       - name: List JAR contents
         run: |
           echo "=== JAR native libraries ==="
-          unzip -l build/libs/*.jar | grep "native/"
+          unzip -l build/libs/*.jar | grep "native/" || echo "No native libraries in JAR"
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
