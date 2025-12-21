@@ -5,16 +5,13 @@ set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-# JNI
 find_package(JNI REQUIRED)
 
-# DOOM source
 add_subdirectory(
     ${CMAKE_CURRENT_SOURCE_DIR}/../DOOM/linuxdoom-1.10
     ${CMAKE_BINARY_DIR}/doom_build
 )
 
-# JNI shared library
 add_library(doomjni SHARED
     DoomJNI.c
 )
@@ -26,7 +23,6 @@ target_include_directories(doomjni PRIVATE
 
 target_link_libraries(doomjni PRIVATE
     doomheadless
-    ${JNI_LIBRARIES}
     m
 )
 
