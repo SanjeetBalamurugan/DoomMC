@@ -13,19 +13,35 @@ set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 # Force position independent code
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+# JNI configuration for cross-compilation
 if(DEFINED ENV{JAVA_HOME})
     set(JAVA_HOME $ENV{JAVA_HOME})
-    set(JAVA_INCLUDE_PATH "${JAVA_HOME}/include")
-    set(JAVA_INCLUDE_PATH2 "${JAVA_HOME}/include/linux")
-    set(JAVA_AWT_INCLUDE_PATH "${JAVA_HOME}/include")
     
-    # Tell CMake where to find JNI
-    set(JNI_INCLUDE_DIRS 
-        "${JAVA_INCLUDE_PATH}"
-        "${JAVA_INCLUDE_PATH2}"
-        CACHE STRING "JNI include directories" FORCE
-    )
+    # Set all required JNI variables
+    set(JAVA_INCLUDE_PATH "${JAVA_HOME}/include" CACHE PATH "Java include path")
+    set(JAVA_INCLUDE_PATH2 "${JAVA_HOME}/include/linux" CACHE PATH "Java include path 2")
+    set(JAVA_AWT_INCLUDE_PATH "${JAVA_HOME}/include" CACHE PATH "Java AWT include path")
     
-    message(STATUS "Cross-compile: Using JAVA_HOME=${JAVA_HOME}")
-    message(STATUS "Cross-compile: JNI_INCLUDE_DIRS=${JNI_INCLUDE_DIRS}")
+    # Find the JVM library (even though we won't link it for header-only compilation)
+    file(GLOB_RECURSE JVM_LIBRARY "${JAVA_HOME}/lib/*/libjvm.so")
+    if(JVM_LIBRARY)
+        list(GET JVM_LIBRARY 0 JVM_LIBRARY)
+        set(JAVA_JVM_LIBRARY "${JVM_LIBRARY}" CACHE FILEPATH "JVM library")
+    else()
+        # Fallback: create a dummy path to satisfy FindJNI
+        set(JAVA_JVM_LIBRARY "${JAVA_HOME}/lib/server/libjvm.so" CACHE FILEPATH "JVM library")
+    endif()
+    
+    # AWT library (also for FindJNI satisfaction)
+    file(GLOB_RECURSE AWT_LIBRARY "${JAVA_HOME}/lib/*/libawt.so")
+    if(AWT_LIBRARY)
+        list(GET AWT_LIBRARY 0 AWT_LIBRARY)
+        set(JAVA_AWT_LIBRARY "${AWT_LIBRARY}" CACHE FILEPATH "AWT library")
+    else()
+        set(JAVA_AWT_LIBRARY "${JAVA_HOME}/lib/libawt.so" CACHE FILEPATH "AWT library")
+    endif()
+    
+    message(STATUS "Toolchain: JAVA_HOME=${JAVA_HOME}")
+    message(STATUS "Toolchain: JAVA_INCLUDE_PATH=${JAVA_INCLUDE_PATH}")
+    message(STATUS "Toolchain: JAVA_JVM_LIBRARY=${JAVA_JVM_LIBRARY}")
 endif()
