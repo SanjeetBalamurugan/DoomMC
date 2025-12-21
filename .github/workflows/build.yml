@@ -7,8 +7,7 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
@@ -22,63 +21,50 @@ jobs:
           sudo ln -sf /opt/cmake/bin/cmake /usr/local/bin/cmake
           cmake --version
 
-      - name: Install cross-compilation toolchains
+      - name: Install cross toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            gcc-aarch64-linux-gnu \
-            g++-aarch64-linux-gnu \
-            binutils-aarch64-linux-gnu
-          aarch64-linux-gnu-gcc --version
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu binutils-aarch64-linux-gnu
 
-      - name: Set up JDK 21
+      - name: Set up JDK
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
-          distribution: 'temurin'
+          distribution: temurin
+          java-version: 21
 
-      - name: Export JAVA_HOME
+      - name: Install Android NDK
+        uses: android-actions/setup-android@v3
+
+      - name: Export Android NDK
         run: |
-          echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
-          echo "Java Home: $JAVA_HOME"
-          ls -la $JAVA_HOME/include/
+          echo "ANDROID_NDK=$ANDROID_NDK_HOME/ndk/$(ls $ANDROID_NDK_HOME/ndk | sort -V | tail -n1)" >> $GITHUB_ENV
 
-      - name: Make gradlew executable
+      - name: Prepare Gradle
         run: chmod +x ./gradlew
 
-      - name: Build x86_64 native library
-        run: |
-          echo "Building for x86_64..."
-          export JAVA_HOME=$JAVA_HOME
-          ./gradlew configureJNI_linux-x86_64 buildJNI_linux-x86_64 copyJNILib_linux-x86_64 --no-daemon
+      - name: Build Linux x86_64 JNI
+        run: ./gradlew configureJNI_linux-x86_64 buildJNI_linux-x86_64 copyJNILib_linux-x86_64 --no-daemon
 
-      - name: Build aarch64 native library
-        run: |
-          echo "Building for aarch64..."
-          export JAVA_HOME=$JAVA_HOME
-          ./gradlew configureJNI_linux-aarch64 buildJNI_linux-aarch64 copyJNILib_linux-aarch64 --no-daemon
+      - name: Build Linux aarch64 JNI
+        run: ./gradlew configureJNI_linux-aarch64 buildJNI_linux-aarch64 copyJNILib_linux-aarch64 --no-daemon
 
-      - name: Build Minecraft mod
-        run: |
-          ./gradlew build --no-daemon
+      - name: Build Android arm64 JNI
+        run: ./gradlew configureJNI_android-arm64 buildJNI_android-arm64 copyJNILib_android-arm64 --no-daemon
 
-      - name: Verify native libraries
-        run: |
-          echo "=== x86_64 library ==="
-          file build/resources/main/native/linux-x86_64/libdoomjni.so || echo "x86_64 library not found"
-          echo ""
-          echo "=== aarch64 library ==="
-          file build/resources/main/native/linux-aarch64/libdoomjni.so || echo "aarch64 library not found"
+      - name: Build mod
+        run: ./gradlew build --no-daemon
 
-      - name: List JAR contents
+      - name: Verify outputs
         run: |
-          echo "=== JAR native libraries ==="
-          unzip -l build/libs/*.jar | grep "native/" || echo "No native libraries in JAR"
+          file build/resources/main/native/linux-x86_64/libdoomjni.so
+          file build/resources/main/native/linux-aarch64/libdoomjni.so
+          file build/resources/main/native/android-arm64/libdoomjni.so
+          unzip -l build/libs/*.jar | grep native/
 
-      - name: Upload Artifacts
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: DoomMC-multi-arch
           path: |
             build/libs/*.jar
-            build/resources/main/native/*/libdoomjni.so
+            build/resources/main/native/**/libdoomjni.so

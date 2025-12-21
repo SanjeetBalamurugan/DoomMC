@@ -12,9 +12,7 @@ add_subdirectory(
     ${CMAKE_BINARY_DIR}/doom_build
 )
 
-add_library(doomjni SHARED
-    DoomJNI.c
-)
+add_library(doomjni SHARED DoomJNI.c)
 
 target_include_directories(doomjni PRIVATE
     ${JNI_INCLUDE_DIRS}
@@ -22,19 +20,12 @@ target_include_directories(doomjni PRIVATE
 )
 
 target_link_libraries(doomjni PRIVATE
-    -Wl,--whole-archive
-    doomheadless
-    -Wl,--no-whole-archive
-    -static-libgcc
-    -static-libstdc++
-    -lm
+    $<LINK_LIBRARY:WHOLE_ARCHIVE,doomheadless>
+    m
 )
 
 target_link_options(doomjni PRIVATE
     -Wl,--no-undefined
-    -Wl,-Bstatic
-    -lm
-    -Wl,-Bdynamic
 )
 
 set_target_properties(doomjni PROPERTIES
