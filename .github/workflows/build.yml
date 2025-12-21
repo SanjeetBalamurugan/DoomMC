@@ -37,7 +37,9 @@ jobs:
 
       - name: Export Android NDK
         run: |
-          echo "ANDROID_NDK=$ANDROID_NDK_HOME/ndk/$(ls $ANDROID_NDK_HOME/ndk | sort -V | tail -n1)" >> $GITHUB_ENV
+                NDK_PATH=$(ls -d $ANDROID_SDK_ROOT/ndk/* | sort -V | tail -n1)
+                echo "ANDROID_NDK=$NDK_PATH" >> $GITHUB_ENV
+
 
       - name: Prepare Gradle
         run: chmod +x ./gradlew
