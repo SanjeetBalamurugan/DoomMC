@@ -25,14 +25,18 @@ target_link_libraries(doomjni PRIVATE
     -Wl,--whole-archive
     doomheadless
     -Wl,--no-whole-archive
-    m
+    -static-libgcc
+    -static-libstdc++
+    -lm
 )
 
 target_link_options(doomjni PRIVATE
-    -static-libgcc
+    -Wl,--no-undefined
+    -Wl,-Bstatic
+    -lm
+    -Wl,-Bdynamic
 )
 
 set_target_properties(doomjni PROPERTIES
     OUTPUT_NAME "doomjni"
-    LINK_FLAGS "-Wl,--no-undefined"
 )

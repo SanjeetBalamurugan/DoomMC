@@ -6,6 +6,7 @@ import com.netherairtune.doommc.WadHelper;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.NativeImageBackedTexture;
 import net.minecraft.text.Text;
@@ -113,18 +114,18 @@ public class DoomScreen extends Screen {
         this.renderBackground(context, mouseX, mouseY, delta);
         
         if (wadMissing) {
-            context.drawCenteredTextWithShadow(
+            context.drawTextWithShadow(
                 this.textRenderer,
                 Text.literal("DOOM WAD file not found!"),
-                this.width / 2,
+                this.width / 2 - this.textRenderer.getWidth("DOOM WAD file not found!") / 2,
                 this.height / 2 - 40,
                 0xFF5555
             );
             
-            context.drawCenteredTextWithShadow(
+            context.drawTextWithShadow(
                 this.textRenderer,
                 Text.literal("Place doom.wad in the DoomMC folder"),
-                this.width / 2,
+                this.width / 2 - this.textRenderer.getWidth("Place doom.wad in the DoomMC folder") / 2,
                 this.height / 2 - 25,
                 0xAAAAAA
             );
@@ -169,8 +170,14 @@ public class DoomScreen extends Screen {
         int x = (this.width - boxWidth) / 2;
         int y = (this.height - boxHeight) / 2;
 
+        RenderSystem.setShader(GameRenderer::getPositionTexProgram);
         RenderSystem.setShaderTexture(0, textureId);
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        
         context.drawTexture(textureId, x, y, 0, 0, boxWidth, boxHeight, doomWidth, doomHeight);
+        
+        RenderSystem.disableBlend();
 
         super.render(context, mouseX, mouseY, delta);
     }
