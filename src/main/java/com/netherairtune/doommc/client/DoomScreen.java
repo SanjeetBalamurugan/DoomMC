@@ -71,7 +71,7 @@ public class DoomScreen extends Screen {
             try {
                 File wadFile = WadHelper.getWadFile();
                 String[] args = {
-                    "doom",
+                    "doomjni",
                     "-iwad", wadFile.getAbsolutePath(),
                     "-warp", "1", "1",
                     "-skill", "3"
