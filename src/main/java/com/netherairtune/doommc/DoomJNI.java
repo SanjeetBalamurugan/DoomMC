@@ -46,21 +46,25 @@ public class DoomJNI {
 
     // UPDATE: it's still not working but lemme check this change
     private static boolean isAndroid() {
-        String specVendor = System.getProperty("java.specification.vendor");
-        if (specVendor != null && specVendor.contains("The Android Project")) {
-              return true;
-         }
-         
-    String vmName = System.getProperty("java.vm.name", "").toLowerCase();
-    String runtimeName = System.getProperty("java.runtime.name", "").toLowerCase();
-    String vendor = System.getProperty("java.vendor", "").toLowerCase();
-
-    return vmName.contains("android") || 
-           runtimeName.contains("android") || 
-           vendor.contains("android") ||
-           vendor.contains("pojav"); // just for now I am gonna check for pojav launcher specifically and TODO: make a config file so that the users can specify the launcher they are using
-           //but why the fuck i need to care for Android?
+         String vmName = System.getProperty("java.vm.name", "").toLowerCase();
+         String vendor = System.getProperty("java.vendor", "").toLowerCase();
+         String bootPath = System.getProperty("java.boot.class.path", "").toLowerCase();
+    
+         if (vmName.contains("dalvik") || 
+              vmName.contains("art") || 
+              vendor.contains("android") || 
+               vendor.contains("pojav") ||
+               bootPath.contains("android.jar")) {
+               return true;
+        }
+    try {
+        Class.forName("android.os.Build");
+        return true;
+    } catch (ClassNotFoundException e) {
+        return false;
     }
+}
+
 
 
     // TODO: just add that bs windows in this
