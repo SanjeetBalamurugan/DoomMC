@@ -22,17 +22,12 @@ dependencies {
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 }
 
-/* =======================
-   MULTI-ARCH JNI BUILD
-   ======================= */
-
 def jniBuildDir = file("$buildDir/jni")
 def nativeCMakeDir = file("native")
 
-// Define architectures to build
 def architectures = [
     'linux-x86_64': [
-        toolchain: null, // native build
+        toolchain: null,
         outputDir: 'linux-x86_64'
     ],
     'linux-aarch64': [
@@ -41,7 +36,6 @@ def architectures = [
     ]
 ]
 
-// Create configure task for each architecture
 architectures.each { archName, config ->
     tasks.register("configureJNI_${archName}", Exec) {
         workingDir = nativeCMakeDir
@@ -92,7 +86,6 @@ architectures.each { archName, config ->
     }
 }
 
-// Master task to build all architectures
 tasks.register('buildAllJNI') {
     architectures.each { archName, config ->
         dependsOn "copyJNILib_${archName}"
@@ -132,7 +125,7 @@ java {
 
 jar {
     from("LICENSE") {
-        rename { "${it}_${archivesBaseName.get()}" }
+        rename { "${it}_${project.archives_base_name}" }
     }
 }
 
