@@ -11,11 +11,9 @@ public final class DoomConfig {
 
     private static DoomConfigData cached;
 
-    // ok fuck it lemme just make the user to use that config to specify is he running mc in Android 
-    public static DoomConfigData get(boolean isAndroid) {
-        if (cached != null) {
-            return cached;
-        }
+    // he heeeeeeeeeeeeeeeeeeeeeee b.
+    public static DoomConfigData get() {
+        if (cached != null) return cached;
 
         try {
             MinecraftClient client = MinecraftClient.getInstance();
@@ -23,14 +21,11 @@ public final class DoomConfig {
             File doomDir = new File(gameDir, "doommc");
             File configFile = new File(doomDir, "doomconfig.json");
 
-            if (!configFile.exists()) {
-                throw new RuntimeException(configFile.getAbsolutePath());
-            }
+            if (!configFile.exists()) throw new RuntimeException(configFile.getAbsolutePath());
 
             try (Reader reader = new FileReader(configFile)) {
                 Gson gson = new Gson();
                 cached = gson.fromJson(reader, DoomConfigData.class);
-                cached.isAndroid = isAndroid;
                 return cached;
             }
         } catch (Exception e) {
