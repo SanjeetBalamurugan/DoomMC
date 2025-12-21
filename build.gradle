@@ -23,41 +23,84 @@ dependencies {
 }
 
 /* =======================
-   JNI CONFIG (Linux aarch64)
+   MULTI-ARCH JNI BUILD
    ======================= */
 
 def jniBuildDir = file("$buildDir/jni")
 def nativeCMakeDir = file("native")
-def jniLibName = "libdoomjni.so"
 
-tasks.register('configureJNI', Exec) {
-    workingDir = nativeCMakeDir
-    commandLine "cmake",
+// Define architectures to build
+def architectures = [
+    'linux-x86_64': [
+        toolchain: null, // native build
+        outputDir: 'linux-x86_64'
+    ],
+    'linux-aarch64': [
+        toolchain: 'toolchains/linux-aarch64.cmake',
+        outputDir: 'linux-aarch64'
+    ]
+]
+
+// Create configure task for each architecture
+architectures.each { archName, config ->
+    tasks.register("configureJNI_${archName}", Exec) {
+        workingDir = nativeCMakeDir
+        
+        def buildDir = file("${jniBuildDir}/${archName}")
+        def cmakeArgs = [
+            "cmake",
             "-S", ".",
-            "-B", jniBuildDir.absolutePath,
-            "-DCMAKE_BUILD_TYPE=Release",
-            "-DCMAKE_TOOLCHAIN_FILE=${nativeCMakeDir}/toolchains/linux-aarch64.cmake"
-}
-
-tasks.register('buildJNI', Exec) {
-    dependsOn 'configureJNI'
-    commandLine "cmake",
-            "--build", jniBuildDir.absolutePath,
-            "--config", "Release"
-}
-
-tasks.register('copyJNILib', Copy) {
-    dependsOn 'buildJNI'
-    from {
-        fileTree(jniBuildDir).matching {
-            include "**/${jniLibName}"
+            "-B", buildDir.absolutePath,
+            "-DCMAKE_BUILD_TYPE=Release"
+        ]
+        
+        if (config.toolchain != null) {
+            cmakeArgs.add("-DCMAKE_TOOLCHAIN_FILE=${nativeCMakeDir}/${config.toolchain}")
+        }
+        
+        commandLine cmakeArgs
+        
+        doFirst {
+            buildDir.mkdirs()
         }
     }
-    into "$buildDir/resources/main/native/linux-aarch64"
+    
+    tasks.register("buildJNI_${archName}", Exec) {
+        dependsOn "configureJNI_${archName}"
+        
+        def buildDir = file("${jniBuildDir}/${archName}")
+        commandLine "cmake",
+                "--build", buildDir.absolutePath,
+                "--config", "Release",
+                "-j", "${Runtime.runtime.availableProcessors()}"
+    }
+    
+    tasks.register("copyJNILib_${archName}", Copy) {
+        dependsOn "buildJNI_${archName}"
+        
+        def buildDir = file("${jniBuildDir}/${archName}")
+        from {
+            fileTree(buildDir).matching {
+                include "**/libdoomjni.so"
+            }
+        }
+        into "$buildDir/resources/main/native/${config.outputDir}"
+        
+        doLast {
+            println "Copied libdoomjni.so to native/${config.outputDir}"
+        }
+    }
+}
+
+// Master task to build all architectures
+tasks.register('buildAllJNI') {
+    architectures.each { archName, config ->
+        dependsOn "copyJNILib_${archName}"
+    }
 }
 
 processResources {
-    dependsOn 'copyJNILib'
+    dependsOn 'buildAllJNI'
     
     inputs.properties([
         mod_id: project.mod_id,
@@ -74,5 +117,30 @@ processResources {
 
     filesMatching("fabric.mod.json") {
         expand(inputs.properties)
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    it.options.release = project.java_version.toInteger()
+}
+
+java {
+    withSourcesJar()
+    sourceCompatibility = JavaVersion.toVersion(project.java_version)
+    targetCompatibility = JavaVersion.toVersion(project.java_version)
+}
+
+jar {
+    from("LICENSE") {
+        rename { "${it}_${archivesBaseName.get()}" }
+    }
+}
+
+publishing {
+    publications {
+        create("mavenJava", MavenPublication) {
+            artifactId = project.archives_base_name
+            from components.java
+        }
     }
 }
