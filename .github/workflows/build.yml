@@ -37,17 +37,25 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
+      - name: Export JAVA_HOME
+        run: |
+          echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+          echo "Java Home: $JAVA_HOME"
+          ls -la $JAVA_HOME/include/
+
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
       - name: Build x86_64 native library
         run: |
           echo "Building for x86_64..."
+          export JAVA_HOME=$JAVA_HOME
           ./gradlew configureJNI_linux-x86_64 buildJNI_linux-x86_64 copyJNILib_linux-x86_64 --no-daemon
 
       - name: Build aarch64 native library
         run: |
           echo "Building for aarch64..."
+          export JAVA_HOME=$JAVA_HOME
           ./gradlew configureJNI_linux-aarch64 buildJNI_linux-aarch64 copyJNILib_linux-aarch64 --no-daemon
 
       - name: Build Minecraft mod
