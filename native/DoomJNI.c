@@ -28,20 +28,23 @@ static int initialized = 0;
 JNIEXPORT void JNICALL Java_com_netherairtune_doommc_DoomJNI_doomInit
   (JNIEnv *env, jclass clazz, jobjectArray jargs) {
     if (initialized) return;
-    
+
     int argc = (*env)->GetArrayLength(env, jargs);
-    char **argv = malloc(sizeof(char*) * argc);
+    char **argv = malloc(sizeof(char*) * (argc + 1));
+
     for (int i = 0; i < argc; i++) {
         jstring str = (jstring)(*env)->GetObjectArrayElement(env, jargs, i);
         const char *utf = (*env)->GetStringUTFChars(env, str, 0);
         argv[i] = strdup(utf);
         (*env)->ReleaseStringUTFChars(env, str, utf);
     }
+
+    argv[argc] = NULL;
+
     DOOM_Init(argc, argv);
-    for (int i = 0; i < argc; i++) free(argv[i]);
-    free(argv);
     initialized = 1;
 }
+
 
 JNIEXPORT void JNICALL Java_com_netherairtune_doommc_DoomJNI_doomStep
   (JNIEnv *env, jclass clazz) {
