@@ -40,11 +40,11 @@ architectures.each { archName, config ->
     tasks.register("configureJNI_${archName}", Exec) {
         workingDir = nativeCMakeDir
         
-        def buildDir = file("${jniBuildDir}/${archName}")
+        def archBuildDir = file("${jniBuildDir}/${archName}")
         def cmakeArgs = [
             "cmake",
             "-S", ".",
-            "-B", buildDir.absolutePath,
+            "-B", archBuildDir.absolutePath,
             "-DCMAKE_BUILD_TYPE=Release"
         ]
         
@@ -55,16 +55,16 @@ architectures.each { archName, config ->
         commandLine cmakeArgs
         
         doFirst {
-            buildDir.mkdirs()
+            archBuildDir.mkdirs()
         }
     }
     
     tasks.register("buildJNI_${archName}", Exec) {
         dependsOn "configureJNI_${archName}"
         
-        def buildDir = file("${jniBuildDir}/${archName}")
+        def archBuildDir = file("${jniBuildDir}/${archName}")
         commandLine "cmake",
-                "--build", buildDir.absolutePath,
+                "--build", archBuildDir.absolutePath,
                 "--config", "Release",
                 "-j", "${Runtime.runtime.availableProcessors()}"
     }
@@ -72,16 +72,26 @@ architectures.each { archName, config ->
     tasks.register("copyJNILib_${archName}", Copy) {
         dependsOn "buildJNI_${archName}"
         
-        def buildDir = file("${jniBuildDir}/${archName}")
+        def archBuildDir = file("${jniBuildDir}/${archName}")
+        def outputDir = file("${buildDir}/resources/main/native/${config.outputDir}")
+        
         from {
-            fileTree(buildDir).matching {
+            fileTree(archBuildDir).matching {
                 include "**/libdoomjni.so"
-            }
+            }.files.collect { it }
         }
-        into "$buildDir/resources/main/native/${config.outputDir}"
+        into outputDir
+        
+        doFirst {
+            outputDir.mkdirs()
+        }
         
         doLast {
-            println "Copied libdoomjni.so to native/${config.outputDir}"
+            def copiedFiles = fileTree(outputDir).matching { include "*.so" }.files
+            if (copiedFiles.isEmpty()) {
+                throw new GradleException("Failed to copy libdoomjni.so for ${archName}")
+            }
+            println "Copied libdoomjni.so to ${outputDir}"
         }
     }
 }
