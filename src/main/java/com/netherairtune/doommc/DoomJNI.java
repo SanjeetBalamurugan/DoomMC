@@ -45,14 +45,12 @@ public class DoomJNI {
     }
 
     private static boolean isAndroid() {
-        try {
-            Class.forName("android.os.Build");
-            return true;
-        } catch (ClassNotFoundException e) {
-            return false;
-        }
+          String runtime = System.getProperty("java.runtime.name"); // ok pojavlauncher why it's not fucking working for you
+          return runtime != null && runtime.toLowerCase().contains("android");
     }
 
+
+    // TODO: just add that bs windows in this
     private static String getPlatformDirectory(String os, String arch) {
         if (isAndroid()) {
             if (arch.contains("aarch64") || arch.contains("arm64")) {
