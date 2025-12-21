@@ -2,6 +2,7 @@ package com.netherairtune.doommc.client;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.netherairtune.doommc.DoomJNI;
+import com.netherairtune.doommc.WadHelper;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
@@ -11,31 +12,66 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import org.lwjgl.glfw.GLFW;
 
+import java.io.File;
+
 public class DoomScreen extends Screen {
 
     private NativeImage image;
     private NativeImageBackedTexture texture;
     private Identifier textureId;
-    private final int doomWidth = DoomJNI.getWidth();
-    private final int doomHeight = DoomJNI.getHeight();
+    private final int doomWidth;
+    private final int doomHeight;
     private final int scale = 2;
     private int waitTicks = 0;
     private boolean playerReady = false;
     private boolean initialized = false;
+    private boolean wadMissing = false;
 
     public DoomScreen() {
         super(Text.literal("DoomMC"));
+        this.doomWidth = 320;
+        this.doomHeight = 200;
     }
 
     @Override
     protected void init() {
         super.init();
         
+        if (!WadHelper.wadExists()) {
+            wadMissing = true;
+            
+            int buttonWidth = 200;
+            int buttonHeight = 20;
+            int centerX = this.width / 2 - buttonWidth / 2;
+            int centerY = this.height / 2;
+            
+            this.addDrawableChild(
+                ButtonWidget.builder(Text.literal("Open DoomMC Folder"), button -> {
+                    WadHelper.openDoomFolder();
+                })
+                .dimensions(centerX, centerY, buttonWidth, buttonHeight)
+                .build()
+            );
+            
+            this.addDrawableChild(
+                ButtonWidget.builder(Text.literal("Close"), button -> {
+                    if (this.client != null) {
+                        this.client.setScreen(null);
+                    }
+                })
+                .dimensions(centerX, centerY + 25, buttonWidth, buttonHeight)
+                .build()
+            );
+            
+            return;
+        }
+        
         if (!initialized) {
             try {
+                File wadFile = WadHelper.getWadFile();
                 String[] args = {
                     "doom",
-                    "-iwad", "doom.wad",
+                    "-iwad", wadFile.getAbsolutePath(),
                     "-warp", "1", "1",
                     "-skill", "3"
                 };
@@ -43,6 +79,10 @@ public class DoomScreen extends Screen {
                 initialized = true;
             } catch (Exception e) {
                 e.printStackTrace();
+                if (this.client != null) {
+                    this.client.setScreen(null);
+                }
+                return;
             }
         }
         
@@ -71,6 +111,31 @@ public class DoomScreen extends Screen {
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         this.renderBackground(context, mouseX, mouseY, delta);
+        
+        if (wadMissing) {
+            context.drawCenteredTextWithShadow(
+                this.textRenderer,
+                Text.literal("DOOM WAD file not found!"),
+                this.width / 2,
+                this.height / 2 - 40,
+                0xFF5555
+            );
+            
+            context.drawCenteredTextWithShadow(
+                this.textRenderer,
+                Text.literal("Place doom.wad in the DoomMC folder"),
+                this.width / 2,
+                this.height / 2 - 25,
+                0xAAAAAA
+            );
+            
+            super.render(context, mouseX, mouseY, delta);
+            return;
+        }
+        
+        if (!initialized) {
+            return;
+        }
         
         if (!playerReady) {
             if (waitTicks < 35) {
@@ -112,6 +177,10 @@ public class DoomScreen extends Screen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (wadMissing) {
+            return super.keyPressed(keyCode, scanCode, modifiers);
+        }
+        
         if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
             if (this.client != null) {
                 this.client.setScreen(null);
@@ -124,24 +193,40 @@ public class DoomScreen extends Screen {
 
     @Override
     public boolean keyReleased(int keyCode, int scanCode, int modifiers) {
+        if (wadMissing) {
+            return super.keyReleased(keyCode, scanCode, modifiers);
+        }
+        
         DoomJNI.keyUp(mapKey(keyCode));
         return true;
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (wadMissing) {
+            return super.mouseClicked(mouseX, mouseY, button);
+        }
+        
         DoomJNI.mouseButton(button + 1, true);
         return super.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (wadMissing) {
+            return super.mouseReleased(mouseX, mouseY, button);
+        }
+        
         DoomJNI.mouseButton(button + 1, false);
         return super.mouseReleased(mouseX, mouseY, button);
     }
 
     @Override
     public void mouseMoved(double mouseX, double mouseY) {
+        if (wadMissing) {
+            return;
+        }
+        
         DoomJNI.mouseMove((int)mouseX / 10, (int)mouseY / 10);
     }
 

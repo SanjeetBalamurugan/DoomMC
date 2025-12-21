@@ -22,10 +22,17 @@ target_include_directories(doomjni PRIVATE
 )
 
 target_link_libraries(doomjni PRIVATE
+    -Wl,--whole-archive
     doomheadless
+    -Wl,--no-whole-archive
     m
+)
+
+target_link_options(doomjni PRIVATE
+    -static-libgcc
 )
 
 set_target_properties(doomjni PROPERTIES
     OUTPUT_NAME "doomjni"
+    LINK_FLAGS "-Wl,--no-undefined"
 )
