@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import com.netherairtune.doommc.DoomConfig;
 
 public class DoomJNI {
     private static boolean loaded = false;
@@ -46,7 +47,7 @@ public class DoomJNI {
 
     // UPDATE: it's still not working but lemme check this change
     private static boolean isAndroid() {
-         String vmName = System.getProperty("java.vm.name", "").toLowerCase();
+         /*String vmName = System.getProperty("java.vm.name", "").toLowerCase();
          String vendor = System.getProperty("java.vendor", "").toLowerCase();
          String bootPath = System.getProperty("java.boot.class.path", "").toLowerCase();
     
@@ -62,7 +63,15 @@ public class DoomJNI {
         return true;
     } catch (ClassNotFoundException e) {
         return false;
-    }
+    }*/
+    
+    //leave it i surrender 
+    try {
+            DoomConfig.DoomConfigData cfg = DoomConfig.get();
+            return cfg.isAndroid;
+        } catch (Exception e) {
+            return false;
+        }
 }
 
 
