@@ -1,8 +1,9 @@
 #include <jni.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
-// Forward declarations
+//Ok fuck let's lee tis
 typedef unsigned char byte;
 typedef int boolean;
 
@@ -41,10 +42,35 @@ JNIEXPORT void JNICALL Java_com_netherairtune_doommc_DoomJNI_doomInit
 
     argv[argc] = NULL;
 
+    char* iwad_path = NULL;
+    for (int i = 0; i < argc; i++) {
+        if (strcmp(argv[i], "-iwad") == 0 && i + 1 < argc) {
+            iwad_path = argv[i + 1];
+            break;
+        }
+    }
+
+    if (iwad_path) {
+        char* last_slash = strrchr(iwad_path, '/');
+        if (last_slash) {
+            size_t dir_len = last_slash - iwad_path;
+            char* dir_path = malloc(dir_len + 1);
+            strncpy(dir_path, iwad_path, dir_len);
+            dir_path[dir_len] = '\0';
+            
+            chdir(dir_path);
+            free(dir_path);
+        }
+    }
+
     DOOM_Init(argc, argv);
     initialized = 1;
-}
 
+    for (int i = 0; i < argc; i++) {
+        free(argv[i]);
+    }
+    free(argv);
+}
 
 JNIEXPORT void JNICALL Java_com_netherairtune_doommc_DoomJNI_doomStep
   (JNIEnv *env, jclass clazz) {
