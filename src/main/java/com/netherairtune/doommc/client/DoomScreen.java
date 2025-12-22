@@ -117,9 +117,9 @@ public class DoomScreen extends Screen {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        this.renderBackground(context, mouseX, mouseY, delta);
-        
         if (wadMissing) {
+            this.renderBackground(context, mouseX, mouseY, delta);
+            
             context.drawTextWithShadow(
                 this.textRenderer,
                 Text.literal("DOOM WAD file not found!"),
@@ -164,7 +164,7 @@ public class DoomScreen extends Screen {
                 int g = framebuffer[idx + 1] & 0xFF;
                 int b = framebuffer[idx + 2] & 0xFF;
                 int a = framebuffer[idx + 3] & 0xFF;
-                int argb = (a << 24) | (r << 16) | (g << 8) | b;
+                int argb = (a << 24) | (b << 16) | (g << 8) | r;
                 image.setColor(px, py, argb);
             }
         }
@@ -225,7 +225,12 @@ public class DoomScreen extends Screen {
             return super.mouseClicked(mouseX, mouseY, button);
         }
         
-        DoomJNI.mouseButton(button + 1, true);
+        if (button == 0) {
+            DoomJNI.mouseButton(DoomJNI.MOUSE_LEFT, true);
+        } else if (button == 1) {
+            DoomJNI.keyDown(' ');
+        }
+        
         return super.mouseClicked(mouseX, mouseY, button);
     }
 
@@ -235,7 +240,12 @@ public class DoomScreen extends Screen {
             return super.mouseReleased(mouseX, mouseY, button);
         }
         
-        DoomJNI.mouseButton(button + 1, false);
+        if (button == 0) {
+            DoomJNI.mouseButton(DoomJNI.MOUSE_LEFT, false);
+        } else if (button == 1) {
+            DoomJNI.keyUp(' ');
+        }
+        
         return super.mouseReleased(mouseX, mouseY, button);
     }
 
@@ -269,10 +279,10 @@ public class DoomScreen extends Screen {
 
     private int mapKey(int key) {
         return switch (key) {
-            case GLFW.GLFW_KEY_W -> 'w';
-            case GLFW.GLFW_KEY_A -> 'a';
-            case GLFW.GLFW_KEY_S -> 's';
-            case GLFW.GLFW_KEY_D -> 'd';
+            case GLFW.GLFW_KEY_W -> DoomJNI.KEY_UPARROW;
+            case GLFW.GLFW_KEY_S -> DoomJNI.KEY_DOWNARROW;
+            case GLFW.GLFW_KEY_A -> DoomJNI.KEY_LEFTARROW;
+            case GLFW.GLFW_KEY_D -> DoomJNI.KEY_RIGHTARROW;
             case GLFW.GLFW_KEY_E -> 'e';
             case GLFW.GLFW_KEY_SPACE -> ' ';
             case GLFW.GLFW_KEY_UP -> DoomJNI.KEY_UPARROW;
