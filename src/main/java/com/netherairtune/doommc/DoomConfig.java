@@ -11,7 +11,6 @@ public final class DoomConfig {
 
     private static DoomConfigData cached;
 
-    // he heeeeeeeeeeeeeeeeeeeeeee b.
     public static DoomConfigData get() {
         if (cached != null) return cached;
 
@@ -26,6 +25,9 @@ public final class DoomConfig {
             try (Reader reader = new FileReader(configFile)) {
                 Gson gson = new Gson();
                 cached = gson.fromJson(reader, DoomConfigData.class);
+                if (cached.mouseSensitivity <= 0) {
+                    cached.mouseSensitivity = 1.0f;
+                }
                 return cached;
             }
         } catch (Exception e) {
@@ -35,5 +37,6 @@ public final class DoomConfig {
 
     public static final class DoomConfigData {
         public boolean isAndroid;
+        public float mouseSensitivity = 1.0f;
     }
 }

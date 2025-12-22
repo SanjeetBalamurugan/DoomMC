@@ -1,6 +1,7 @@
 package com.netherairtune.doommc.client;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.netherairtune.doommc.DoomConfig;
 import com.netherairtune.doommc.DoomJNI;
 import com.netherairtune.doommc.WadHelper;
 import net.minecraft.client.gui.DrawContext;
@@ -12,6 +13,7 @@ import net.minecraft.client.texture.NativeImageBackedTexture;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import org.lwjgl.glfw.GLFW;
+import org.lwjgl.opengl.GL11;
 
 import java.io.File;
 
@@ -20,18 +22,18 @@ public class DoomScreen extends Screen {
     private NativeImage image;
     private NativeImageBackedTexture texture;
     private Identifier textureId;
-    private final int doomWidth;
-    private final int doomHeight;
-    private final int scale = 2;
+    private final int doomWidth = 320;
+    private final int doomHeight = 200;
     private int waitTicks = 0;
     private boolean playerReady = false;
     private boolean initialized = false;
     private boolean wadMissing = false;
+    private int lastMouseX = 0;
+    private int lastMouseY = 0;
+    private boolean firstMouse = true;
 
     public DoomScreen() {
         super(Text.literal("DoomMC"));
-        this.doomWidth = 320;
-        this.doomHeight = 200;
     }
 
     @Override
@@ -70,10 +72,6 @@ public class DoomScreen extends Screen {
         if (!initialized) {
             try {
                 File wadFile = WadHelper.getWadFile();
-                System.out.println("[DoomMC] IWAD path: " + wadFile.getAbsolutePath()); // just for debug 
-                System.out.println("[DoomMC] IWAD exists: " + wadFile.exists());
-                System.out.println("[DoomMC] IWAD size: " + wadFile.length());
-                
                 String[] args = {
                     "doomjni",
                     "-iwad", wadFile.getAbsolutePath(),
@@ -94,21 +92,25 @@ public class DoomScreen extends Screen {
         if (image == null) {
             image = new NativeImage(doomWidth, doomHeight, false);
             texture = new NativeImageBackedTexture(image);
+            texture.bindTexture();
+            GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
+            GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
             textureId = this.client.getTextureManager().registerDynamicTexture("doom_screen", texture);
         }
-        
-        int boxWidth = doomWidth * scale;
-        int boxHeight = doomHeight * scale;
-        int x = (this.width - boxWidth) / 2;
-        int y = (this.height - boxHeight) / 2;
+
+        int screenHeight = (int)(this.height * 0.65);
+        int displayWidth = (int)(screenHeight * 16.0 / 9.0);
+        int displayHeight = screenHeight;
+        int x = (this.width - displayWidth) / 2;
+        int y = (this.height - displayHeight) / 2;
 
         this.addDrawableChild(
-            ButtonWidget.builder(Text.literal("X"), button -> {
+            ButtonWidget.builder(Text.literal("Close"), button -> {
                 if (this.client != null) {
                     this.client.setScreen(null);
                 }
             })
-            .dimensions(x + boxWidth - 20, y + 5, 15, 15)
+            .dimensions(x + displayWidth - 60, y + 5, 55, 20)
             .build()
         );
     }
@@ -155,31 +157,36 @@ public class DoomScreen extends Screen {
         }
         
         byte[] framebuffer = DoomJNI.getFramebuffer();
-        for (int y = 0; y < doomHeight; y++) {
-            for (int x = 0; x < doomWidth; x++) {
-                int idx = (y * doomWidth + x) * 4;
+        for (int py = 0; py < doomHeight; py++) {
+            for (int px = 0; px < doomWidth; px++) {
+                int idx = (py * doomWidth + px) * 4;
                 int r = framebuffer[idx] & 0xFF;
                 int g = framebuffer[idx + 1] & 0xFF;
                 int b = framebuffer[idx + 2] & 0xFF;
                 int a = framebuffer[idx + 3] & 0xFF;
-                int argb = (a << 24) | (b << 16) | (g << 8) | r;
-                image.setColor(x, y, argb);
+                int argb = (a << 24) | (r << 16) | (g << 8) | b;
+                image.setColor(px, py, argb);
             }
         }
         
         texture.upload();
 
-        int boxWidth = doomWidth * scale;
-        int boxHeight = doomHeight * scale;
-        int x = (this.width - boxWidth) / 2;
-        int y = (this.height - boxHeight) / 2;
+        int screenHeight = (int)(this.height * 0.65);
+        int displayWidth = (int)(screenHeight * 16.0 / 9.0);
+        int displayHeight = screenHeight;
+        int x = (this.width - displayWidth) / 2;
+        int y = (this.height - displayHeight) / 2;
 
         RenderSystem.setShader(GameRenderer::getPositionTexProgram);
         RenderSystem.setShaderTexture(0, textureId);
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
         
-        context.drawTexture(textureId, x, y, 0, 0, boxWidth, boxHeight, doomWidth, doomHeight);
+        texture.bindTexture();
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
+        
+        context.drawTexture(textureId, x, y, 0, 0, displayWidth, displayHeight, doomWidth, doomHeight);
         
         RenderSystem.disableBlend();
 
@@ -234,11 +241,30 @@ public class DoomScreen extends Screen {
 
     @Override
     public void mouseMoved(double mouseX, double mouseY) {
-        if (wadMissing) {
+        if (wadMissing || !initialized) {
             return;
         }
         
-        DoomJNI.mouseMove((int)mouseX / 10, (int)mouseY / 10);
+        if (firstMouse) {
+            lastMouseX = (int)mouseX;
+            lastMouseY = (int)mouseY;
+            firstMouse = false;
+            return;
+        }
+        
+        int deltaX = (int)mouseX - lastMouseX;
+        int deltaY = (int)mouseY - lastMouseY;
+        lastMouseX = (int)mouseX;
+        lastMouseY = (int)mouseY;
+        
+        try {
+            float sensitivity = DoomConfig.get().mouseSensitivity;
+            deltaX = (int)(deltaX * sensitivity);
+            deltaY = (int)(deltaY * sensitivity);
+        } catch (Exception e) {
+        }
+        
+        DoomJNI.mouseMove(deltaX, deltaY);
     }
 
     private int mapKey(int key) {
@@ -247,6 +273,7 @@ public class DoomScreen extends Screen {
             case GLFW.GLFW_KEY_A -> 'a';
             case GLFW.GLFW_KEY_S -> 's';
             case GLFW.GLFW_KEY_D -> 'd';
+            case GLFW.GLFW_KEY_E -> 'e';
             case GLFW.GLFW_KEY_SPACE -> ' ';
             case GLFW.GLFW_KEY_UP -> DoomJNI.KEY_UPARROW;
             case GLFW.GLFW_KEY_DOWN -> DoomJNI.KEY_DOWNARROW;
