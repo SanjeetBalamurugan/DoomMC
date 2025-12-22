@@ -27,9 +27,7 @@ public class DoomScreen extends Screen {
     private final int doomHeight = 200;
 
     private boolean initialized = false;
-    private boolean playerReady = false;
     private boolean wadMissing = false;
-    private int waitTicks = 0;
 
     private int lastMouseX;
     private boolean firstMouse = true;
@@ -50,13 +48,13 @@ public class DoomScreen extends Screen {
             int y = this.height / 2;
 
             addDrawableChild(ButtonWidget.builder(
-                Text.literal("Open DoomMC Folder"),
-                b -> WadHelper.openDoomFolder()
+                    Text.literal("Open DoomMC Folder"),
+                    b -> WadHelper.openDoomFolder()
             ).dimensions(x, y, w, 20).build());
 
             addDrawableChild(ButtonWidget.builder(
-                Text.literal("Close"),
-                b -> this.client.setScreen(null)
+                    Text.literal("Close"),
+                    b -> this.client.setScreen(null)
             ).dimensions(x, y + 25, w, 20).build());
 
             return;
@@ -65,10 +63,10 @@ public class DoomScreen extends Screen {
         if (!initialized) {
             File wad = WadHelper.getWadFile();
             DoomJNI.doomInit(new String[]{
-                "doomjni",
-                "-iwad", wad.getAbsolutePath(),
-                "-warp", "1", "1",
-                "-skill", "3"
+                    "doomjni",
+                    "-iwad", wad.getAbsolutePath(),
+                    "-warp", "1", "1",
+                    "-skill", "3"
             });
             initialized = true;
         }
@@ -83,11 +81,22 @@ public class DoomScreen extends Screen {
 
         if (!DoomConfig.get().isAndroid) {
             GLFW.glfwSetInputMode(
-                client.getWindow().getHandle(),
-                GLFW.GLFW_CURSOR,
-                GLFW.GLFW_CURSOR_DISABLED
+                    client.getWindow().getHandle(),
+                    GLFW.GLFW_CURSOR,
+                    GLFW.GLFW_CURSOR_DISABLED
             );
         }
+
+        // Close button (top-right)
+        addDrawableChild(ButtonWidget.builder(
+                Text.literal("Close"),
+                b -> close()
+        ).dimensions(
+                this.width - 90,
+                10,
+                80,
+                20
+        ).build());
     }
 
     @Override
@@ -101,18 +110,27 @@ public class DoomScreen extends Screen {
             for (int x = 0; x < doomWidth; x++) {
                 int i = (y * doomWidth + x) * 4;
                 int argb =
-                    (fb[i + 3] & 0xFF) << 24 |
-                    (fb[i + 2] & 0xFF) << 16 |
-                    (fb[i + 1] & 0xFF) << 8 |
-                    (fb[i] & 0xFF);
+                        (fb[i + 3] & 0xFF) << 24 |
+                        (fb[i + 2] & 0xFF) << 16 |
+                        (fb[i + 1] & 0xFF) << 8 |
+                        (fb[i] & 0xFF);
                 image.setColor(x, y, argb);
             }
         }
 
         texture.upload();
 
-        int h = (int)(height * 0.65f);
-        int w = h * 16 / 9;
+        // Correct Doom aspect ratio (16:10)
+        float aspect = (float) doomWidth / doomHeight;
+
+        int h = (int) (height * 0.75f);
+        int w = (int) (h * aspect);
+
+        if (w > width) {
+            w = width;
+            h = (int) (w / aspect);
+        }
+
         int x = (width - w) / 2;
         int y = (height - h) / 2;
 
@@ -124,43 +142,61 @@ public class DoomScreen extends Screen {
     @Override
     public boolean keyPressed(int key, int sc, int mods) {
         if (key == GLFW.GLFW_KEY_ESCAPE) {
+            DoomJNI.keyDown(DoomJNI.KEY_ESCAPE);
+            DoomJNI.keyUp(DoomJNI.KEY_ESCAPE);
             close();
             return true;
         }
-        DoomJNI.keyDown(mapKey(key));
-        return true;
+
+        int doomKey = mapKey(key);
+        if (doomKey != -1) {
+            DoomJNI.keyDown(doomKey);
+            return true;
+        }
+        return false;
     }
 
     @Override
     public boolean keyReleased(int key, int sc, int mods) {
-        DoomJNI.keyUp(mapKey(key));
-        return true;
+        int doomKey = mapKey(key);
+        if (doomKey != -1) {
+            DoomJNI.keyUp(doomKey);
+            return true;
+        }
+        return false;
     }
 
     @Override
     public void mouseMoved(double x, double y) {
         if (firstMouse) {
-            lastMouseX = (int)x;
+            lastMouseX = (int) x;
             firstMouse = false;
             return;
         }
 
-        int dx = (int)x - lastMouseX;
-        lastMouseX = (int)x;
+        int dx = (int) (x - lastMouseX);
+        lastMouseX = (int) x;
 
-        DoomJNI.mouseMove(dx, 0);
+        float sens = DoomConfig.get().mouseSensitivity;
+        DoomJNI.mouseMove((int) (dx * sens), 0);
     }
 
     @Override
     public boolean mouseClicked(double x, double y, int button) {
-        if (button == 0) DoomJNI.mouseButton(DoomJNI.MOUSE_LEFT, true);
-        return true;
+        if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+            DoomJNI.mouseButton(DoomJNI.MOUSE_LEFT, true);
+            return true;
+        }
+        return false;
     }
 
     @Override
     public boolean mouseReleased(double x, double y, int button) {
-        if (button == 0) DoomJNI.mouseButton(DoomJNI.MOUSE_LEFT, false);
-        return true;
+        if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+            DoomJNI.mouseButton(DoomJNI.MOUSE_LEFT, false);
+            return true;
+        }
+        return false;
     }
 
     private int mapKey(int k) {
@@ -169,11 +205,17 @@ public class DoomScreen extends Screen {
             case GLFW.GLFW_KEY_S -> DoomJNI.KEY_DOWNARROW;
             case GLFW.GLFW_KEY_A -> DoomJNI.KEY_LEFTARROW;
             case GLFW.GLFW_KEY_D -> DoomJNI.KEY_RIGHTARROW;
-            case GLFW.GLFW_KEY_SPACE -> ' ';
+
+            case GLFW.GLFW_KEY_LEFT_SHIFT, GLFW.GLFW_KEY_RIGHT_SHIFT -> DoomJNI.KEY_RSHIFT;
             case GLFW.GLFW_KEY_LEFT_CONTROL, GLFW.GLFW_KEY_RIGHT_CONTROL -> DoomJNI.KEY_RCTRL;
             case GLFW.GLFW_KEY_LEFT_ALT, GLFW.GLFW_KEY_RIGHT_ALT -> DoomJNI.KEY_RALT;
+
+            case GLFW.GLFW_KEY_SPACE -> ' ';
             case GLFW.GLFW_KEY_ENTER -> DoomJNI.KEY_ENTER;
-            default -> k;
+            case GLFW.GLFW_KEY_TAB -> DoomJNI.KEY_TAB;
+            case GLFW.GLFW_KEY_BACKSPACE -> DoomJNI.KEY_BACKSPACE;
+
+            default -> -1;
         };
     }
 
@@ -181,11 +223,13 @@ public class DoomScreen extends Screen {
     public void close() {
         if (!DoomConfig.get().isAndroid) {
             GLFW.glfwSetInputMode(
-                client.getWindow().getHandle(),
-                GLFW.GLFW_CURSOR,
-                GLFW.GLFW_CURSOR_NORMAL
+                    client.getWindow().getHandle(),
+                    GLFW.GLFW_CURSOR,
+                    GLFW.GLFW_CURSOR_NORMAL
             );
         }
+
+        firstMouse = true;
 
         if (texture != null) texture.close();
         if (image != null) image.close();
