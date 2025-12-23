@@ -100,7 +100,10 @@ public class DoomScreen extends Screen {
 
     @Override
     public void render(DrawContext ctx, int mx, int my, float delta) {
-        if (wadMissing || !initialized) return;
+        if (wadMissing || !initialized) {
+            super.render(ctx, mx, my, delta);
+            return;
+        }
 
         DoomJNI.doomStep();
 
@@ -119,22 +122,30 @@ public class DoomScreen extends Screen {
 
         texture.upload();
 
+        // Calculate scaling to fit screen while maintaining aspect ratio
         float aspect = (float) doomWidth / doomHeight;
-
-        int h = (int) (height * 0.75f);
-        int w = (int) (h * aspect);
-
-        if (w > width) {
-            w = width;
-            h = (int) (w / aspect);
+        int renderWidth, renderHeight;
+        
+        // Try to fit by height first
+        renderHeight = height;
+        renderWidth = (int) (renderHeight * aspect);
+        
+        // If too wide, fit by width instead
+        if (renderWidth > width) {
+            renderWidth = width;
+            renderHeight = (int) (renderWidth / aspect);
         }
 
-        int x = (width - w) / 2;
-        int y = (height - h) / 2;
+        // Center on screen
+        int x = (width - renderWidth) / 2;
+        int y = (height - renderHeight) / 2;
 
         RenderSystem.setShader(GameRenderer::getPositionTexProgram);
         RenderSystem.setShaderTexture(0, textureId);
-        ctx.drawTexture(textureId, x, y, 0, 0, w, h, doomWidth, doomHeight);
+        ctx.drawTexture(textureId, x, y, 0, 0, renderWidth, renderHeight, doomWidth, doomHeight);
+        
+        // Render close button on top
+        super.render(ctx, mx, my, delta);
     }
 
     @Override
@@ -164,6 +175,11 @@ public class DoomScreen extends Screen {
 
     @Override
     public void mouseMoved(double x, double y) {
+        // Disable mouse movement on Android
+        if (DoomConfig.get().isAndroid) {
+            return;
+        }
+        
         if (firstMouse) {
             lastMouseX = (int) x;
             firstMouse = false;
@@ -179,6 +195,11 @@ public class DoomScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double x, double y, int button) {
+        // Disable mouse buttons on Android
+        if (DoomConfig.get().isAndroid) {
+            return false;
+        }
+        
         if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
             DoomJNI.keyDown(DoomJNI.KEY_RCTRL);
             return true;
@@ -192,6 +213,11 @@ public class DoomScreen extends Screen {
 
     @Override
     public boolean mouseReleased(double x, double y, int button) {
+        // Disable mouse buttons on Android
+        if (DoomConfig.get().isAndroid) {
+            return false;
+        }
+        
         if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
             DoomJNI.keyUp(DoomJNI.KEY_RCTRL);
             return true;
@@ -205,21 +231,33 @@ public class DoomScreen extends Screen {
 
     private int mapKey(int k) {
         return switch (k) {
-            case GLFW.GLFW_KEY_W, GLFW.GLFW_KEY_UP -> DoomJNI.KEY_UPARROW;
-            case GLFW.GLFW_KEY_S, GLFW.GLFW_KEY_DOWN -> DoomJNI.KEY_DOWNARROW;
-            case GLFW.GLFW_KEY_A, GLFW.GLFW_KEY_LEFT -> ',';
-            case GLFW.GLFW_KEY_D, GLFW.GLFW_KEY_RIGHT -> '.';
-            case GLFW.GLFW_KEY_Q -> DoomJNI.KEY_LEFTARROW;
-            case GLFW.GLFW_KEY_E -> DoomJNI.KEY_RIGHTARROW;
+            // WASD movement (modern controls)
+            case GLFW.GLFW_KEY_W -> DoomJNI.KEY_UPARROW;      // Forward
+            case GLFW.GLFW_KEY_S -> DoomJNI.KEY_DOWNARROW;    // Backward
+            case GLFW.GLFW_KEY_A -> DoomJNI.KEY_LEFTARROW;    // Turn left
+            case GLFW.GLFW_KEY_D -> DoomJNI.KEY_RIGHTARROW;   // Turn right
+            
+            // Arrow keys (also movement - same as WASD)
+            case GLFW.GLFW_KEY_UP -> DoomJNI.KEY_UPARROW;     // Forward
+            case GLFW.GLFW_KEY_DOWN -> DoomJNI.KEY_DOWNARROW; // Backward
+            case GLFW.GLFW_KEY_LEFT -> DoomJNI.KEY_LEFTARROW; // Turn left
+            case GLFW.GLFW_KEY_RIGHT -> DoomJNI.KEY_RIGHTARROW; // Turn right
+            
+            // Q/E for strafing (more intuitive for modern players)
+            case GLFW.GLFW_KEY_Q -> ',';  // Strafe left
+            case GLFW.GLFW_KEY_E -> '.';  // Strafe right
 
-            case GLFW.GLFW_KEY_LEFT_SHIFT, GLFW.GLFW_KEY_RIGHT_SHIFT -> DoomJNI.KEY_RSHIFT;
-            case GLFW.GLFW_KEY_LEFT_CONTROL, GLFW.GLFW_KEY_RIGHT_CONTROL -> DoomJNI.KEY_RCTRL;
-            case GLFW.GLFW_KEY_LEFT_ALT, GLFW.GLFW_KEY_RIGHT_ALT -> DoomJNI.KEY_RALT;
+            // Modifiers
+            case GLFW.GLFW_KEY_LEFT_SHIFT, GLFW.GLFW_KEY_RIGHT_SHIFT -> DoomJNI.KEY_RSHIFT; // Run
+            case GLFW.GLFW_KEY_LEFT_CONTROL, GLFW.GLFW_KEY_RIGHT_CONTROL -> DoomJNI.KEY_RCTRL; // Fire
+            case GLFW.GLFW_KEY_LEFT_ALT, GLFW.GLFW_KEY_RIGHT_ALT -> DoomJNI.KEY_RALT; // Strafe modifier
 
-            case GLFW.GLFW_KEY_SPACE -> ' ';
+            // Actions
+            case GLFW.GLFW_KEY_SPACE -> ' ';  // Use/Open doors
             case GLFW.GLFW_KEY_ENTER -> DoomJNI.KEY_ENTER;
-            case GLFW.GLFW_KEY_TAB -> DoomJNI.KEY_TAB;
+            case GLFW.GLFW_KEY_TAB -> DoomJNI.KEY_TAB; // Automap
 
+            // Weapon selection
             case GLFW.GLFW_KEY_1 -> '1';
             case GLFW.GLFW_KEY_2 -> '2';
             case GLFW.GLFW_KEY_3 -> '3';
