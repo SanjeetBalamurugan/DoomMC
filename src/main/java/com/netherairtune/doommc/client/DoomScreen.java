@@ -134,11 +134,6 @@ public class DoomScreen extends Screen {
 
     @Override
     public boolean keyPressed(int key, int sc, int mods) {
-        if (key == GLFW.GLFW_KEY_ESCAPE) {
-            close();
-            return true;
-        }
-
         int doomKey = mapKey(key);
         if (doomKey != -1) {
             DoomJNI.keyDown(doomKey);
@@ -199,6 +194,7 @@ public class DoomScreen extends Screen {
 
     private int mapKey(int k) {
         return switch (k) {
+            case GLFW.GLFW_KEY_ESCAPE -> DoomJNI.KEY_ESCAPE;
             case GLFW.GLFW_KEY_W, GLFW.GLFW_KEY_UP -> DoomJNI.KEY_UPARROW;
             case GLFW.GLFW_KEY_S, GLFW.GLFW_KEY_DOWN -> DoomJNI.KEY_DOWNARROW;
             case GLFW.GLFW_KEY_A, GLFW.GLFW_KEY_LEFT -> DoomJNI.KEY_LEFTARROW;
