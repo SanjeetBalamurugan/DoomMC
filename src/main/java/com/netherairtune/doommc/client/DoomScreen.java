@@ -237,7 +237,4 @@ public class DoomScreen extends Screen {
 
         super.close();
     }
-
-    @Override
-    public void renderBackground(DrawContext ctx) {}
 }
