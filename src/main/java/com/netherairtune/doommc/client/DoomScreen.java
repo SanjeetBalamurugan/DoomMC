@@ -108,9 +108,9 @@ public class DoomScreen extends Screen {
         for (int y = 0; y < doomHeight; y++) {
             for (int x = 0; x < doomWidth; x++) {
                 int i = (y * doomWidth + x) * 4;
-                int r = fb[i] & 0xFF;
+                int b = fb[i] & 0xFF;
                 int g = fb[i + 1] & 0xFF;
-                int b = fb[i + 2] & 0xFF;
+                int r = fb[i + 2] & 0xFF;
                 int a = fb[i + 3] & 0xFF;
                 int abgr = (a << 24) | (b << 16) | (g << 8) | r;
                 image.setColor(x, y, abgr);
@@ -207,12 +207,10 @@ public class DoomScreen extends Screen {
         return switch (k) {
             case GLFW.GLFW_KEY_W, GLFW.GLFW_KEY_UP -> DoomJNI.KEY_UPARROW;
             case GLFW.GLFW_KEY_S, GLFW.GLFW_KEY_DOWN -> DoomJNI.KEY_DOWNARROW;
-            case GLFW.GLFW_KEY_A -> ',';
-            case GLFW.GLFW_KEY_D -> '.';
+            case GLFW.GLFW_KEY_A, GLFW.GLFW_KEY_LEFT -> ',';
+            case GLFW.GLFW_KEY_D, GLFW.GLFW_KEY_RIGHT -> '.';
             case GLFW.GLFW_KEY_Q -> DoomJNI.KEY_LEFTARROW;
             case GLFW.GLFW_KEY_E -> DoomJNI.KEY_RIGHTARROW;
-            case GLFW.GLFW_KEY_LEFT -> ',';
-            case GLFW.GLFW_KEY_RIGHT -> '.';
 
             case GLFW.GLFW_KEY_LEFT_SHIFT, GLFW.GLFW_KEY_RIGHT_SHIFT -> DoomJNI.KEY_RSHIFT;
             case GLFW.GLFW_KEY_LEFT_CONTROL, GLFW.GLFW_KEY_RIGHT_CONTROL -> DoomJNI.KEY_RCTRL;

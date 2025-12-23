@@ -3,7 +3,6 @@
 #include <string.h>
 #include <unistd.h>
 
-//Ok fuck let's lee tis
 typedef unsigned char byte;
 typedef int boolean;
 
@@ -86,9 +85,13 @@ JNIEXPORT void JNICALL Java_com_netherairtune_doommc_DoomJNI_doomStep
     
     for (int i = 0; i < DOOM_WIDTH * DOOM_HEIGHT; i++) {
         byte index = screen[i];
-        framebuffer[i * 4 + 0] = (jbyte)palette[index * 3 + 0];
-        framebuffer[i * 4 + 1] = (jbyte)palette[index * 3 + 1];
-        framebuffer[i * 4 + 2] = (jbyte)palette[index * 3 + 2];
+        byte r = palette[index * 3 + 0];
+        byte g = palette[index * 3 + 1];
+        byte b = palette[index * 3 + 2];
+        
+        framebuffer[i * 4 + 0] = (jbyte)b;
+        framebuffer[i * 4 + 1] = (jbyte)g;
+        framebuffer[i * 4 + 2] = (jbyte)r;
         framebuffer[i * 4 + 3] = (jbyte)255;
     }
 }
