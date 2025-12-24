@@ -282,4 +282,8 @@ public class DoomScreen extends Screen {
 
         super.close();
     }
+
+    @Override
+public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {}
+
 }
