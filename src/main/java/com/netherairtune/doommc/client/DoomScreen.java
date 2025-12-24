@@ -126,16 +126,18 @@ public void render(DrawContext ctx, int mx, int my, float delta) {
 
     texture.upload();
 
-    int targetWidth = (int) (this.width * 0.65);
-    int targetHeight = (int) (targetWidth * doomHeight / (float) doomWidth);
+    int screenWidth = this.width;
+    int screenHeight = this.height;
+    
+    float scaleX = (float) screenWidth / doomWidth;
+    float scaleY = (float) screenHeight / doomHeight;
+    float scale = Math.min(scaleX, scaleY); 
 
-    if (targetHeight > this.height * 0.85) {
-        targetHeight = (int) (this.height * 0.85);
-        targetWidth = (int) (targetHeight * doomWidth / (float) doomHeight);
-    }
+    int targetWidth = (int) (doomWidth * scale);
+    int targetHeight = (int) (doomHeight * scale);
 
-    int x = (this.width - targetWidth) / 2;
-    int y = (this.height - targetHeight) / 2;
+    int x = (screenWidth - targetWidth) / 2;
+    int y = (screenHeight - targetHeight) / 2;
 
     RenderSystem.setShader(GameRenderer::getPositionTexProgram);
     RenderSystem.setShaderTexture(0, textureId);
@@ -143,7 +145,6 @@ public void render(DrawContext ctx, int mx, int my, float delta) {
 
     super.render(ctx, mx, my, delta);
 }
-
 
     @Override
     public boolean keyPressed(int key, int sc, int mods) {
