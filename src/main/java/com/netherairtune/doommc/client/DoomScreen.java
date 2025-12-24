@@ -121,7 +121,8 @@ public void render(DrawContext ctx, int mx, int my, float delta) {
             int a = fb[i + 3] & 0xFF;
 
             int fy = doomHeight - 1 - y;
-            image.setColor(x, fy, NativeImage.packColor(a, r, g, b));
+            int abgr = (a << 24) | (b << 16) | (g << 8) | r;
+            image.setColor(x, fy, abgr);
         }
     }
 
@@ -144,6 +145,7 @@ public void render(DrawContext ctx, int mx, int my, float delta) {
 
     super.render(ctx, mx, my, delta);
 }
+
 
 
     @Override
