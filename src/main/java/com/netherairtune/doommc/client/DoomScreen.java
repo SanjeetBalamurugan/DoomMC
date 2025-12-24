@@ -103,6 +103,11 @@ public class DoomScreen extends Screen {
             return;
         }
 
+        if (DoomJNI.shouldExit()) {
+            close();
+            return;
+        }
+
         DoomJNI.doomStep();
 
         byte[] fb = DoomJNI.getFramebuffer();
@@ -119,20 +124,22 @@ public class DoomScreen extends Screen {
 
         texture.upload();
 
-        float aspect = (float) doomWidth / doomHeight;
-        int h = (int) (height * 0.85f);
-        int w = (int) (h * aspect);
-        if (w > width) {
-            w = width;
-            h = (int) (w / aspect);
+        int targetWidth = (int)(this.width * 0.65);
+        int targetHeight = (int)(targetWidth * doomHeight / (float)doomWidth);
+        
+        if (targetHeight > this.height * 0.85) {
+            targetHeight = (int)(this.height * 0.85);
+            targetWidth = (int)(targetHeight * doomWidth / (float)doomHeight);
         }
 
-        int x = (width - w) / 2;
-        int y = (height - h) / 2;
+        int x = (this.width - targetWidth) / 2;
+        int y = (this.height - targetHeight) / 2;
 
         RenderSystem.setShader(GameRenderer::getPositionTexProgram);
         RenderSystem.setShaderTexture(0, textureId);
-        ctx.drawTexture(textureId, x, y, 0, 0, w, h, doomWidth, doomHeight);
+        ctx.drawTexture(textureId, x, y, 0, 0, targetWidth, targetHeight, doomWidth, doomHeight);
+        
+        super.render(ctx, mx, my, delta);
     }
 
     @Override
@@ -179,7 +186,7 @@ public class DoomScreen extends Screen {
             DoomJNI.keyDown(' ');
             return true;
         }
-        return false;
+        return super.mouseClicked(x, y, button);
     }
 
     @Override
@@ -192,7 +199,7 @@ public class DoomScreen extends Screen {
             DoomJNI.keyUp(' ');
             return true;
         }
-        return false;
+        return super.mouseReleased(x, y, button);
     }
 
     private int mapKey(int k) {

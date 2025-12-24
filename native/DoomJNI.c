@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <setjmp.h>
 
 typedef unsigned char byte;
 typedef int boolean;
@@ -24,6 +25,14 @@ void DOOM_MouseButton(int button, boolean pressed);
 
 static jbyte framebuffer[DOOM_WIDTH * DOOM_HEIGHT * 4];
 static int initialized = 0;
+static jmp_buf exit_jmp;
+static int doom_should_exit = 0;
+
+// Override exit to catch DOOM's exit calls
+void exit(int status) {
+    doom_should_exit = 1;
+    longjmp(exit_jmp, 1);
+}
 
 JNIEXPORT void JNICALL Java_com_netherairtune_doommc_DoomJNI_doomInit
   (JNIEnv *env, jclass clazz, jobjectArray jargs) {
@@ -62,8 +71,14 @@ JNIEXPORT void JNICALL Java_com_netherairtune_doommc_DoomJNI_doomInit
         }
     }
 
-    DOOM_Init(argc, argv);
-    initialized = 1;
+    doom_should_exit = 0;
+    if (setjmp(exit_jmp) == 0) {
+        DOOM_Init(argc, argv);
+        initialized = 1;
+    } else {
+        initialized = 0;
+        doom_should_exit = 1;
+    }
 
     for (int i = 0; i < argc; i++) {
         free(argv[i]);
@@ -73,26 +88,31 @@ JNIEXPORT void JNICALL Java_com_netherairtune_doommc_DoomJNI_doomInit
 
 JNIEXPORT void JNICALL Java_com_netherairtune_doommc_DoomJNI_doomStep
   (JNIEnv *env, jclass clazz) {
-    if (!initialized) return;
+    if (!initialized || doom_should_exit) return;
     
-    DOOM_RunTic();
-    DOOM_RenderFrame();
-    
-    byte* screen = DOOM_GetScreenBuffer();
-    byte* palette = DOOM_GetPalette();
-    
-    if (!screen || !palette) return;
-    
-    for (int i = 0; i < DOOM_WIDTH * DOOM_HEIGHT; i++) {
-        byte index = screen[i];
-        byte r = palette[index * 3 + 0];
-        byte g = palette[index * 3 + 1];
-        byte b = palette[index * 3 + 2];
+    if (setjmp(exit_jmp) == 0) {
+        DOOM_RunTic();
+        DOOM_RenderFrame();
         
-        framebuffer[i * 4 + 0] = (jbyte)b;
-        framebuffer[i * 4 + 1] = (jbyte)g;
-        framebuffer[i * 4 + 2] = (jbyte)r;
-        framebuffer[i * 4 + 3] = (jbyte)255;
+        byte* screen = DOOM_GetScreenBuffer();
+        byte* palette = DOOM_GetPalette();
+        
+        if (!screen || !palette) return;
+        
+        for (int i = 0; i < DOOM_WIDTH * DOOM_HEIGHT; i++) {
+            byte index = screen[i];
+            byte r = palette[index * 3 + 0];
+            byte g = palette[index * 3 + 1];
+            byte b = palette[index * 3 + 2];
+            
+            framebuffer[i * 4 + 0] = (jbyte)b;
+            framebuffer[i * 4 + 1] = (jbyte)g;
+            framebuffer[i * 4 + 2] = (jbyte)r;
+            framebuffer[i * 4 + 3] = (jbyte)255;
+        }
+    } else {
+        initialized = 0;
+        doom_should_exit = 1;
     }
 }
 
@@ -116,25 +136,44 @@ JNIEXPORT jint JNICALL Java_com_netherairtune_doommc_DoomJNI_getHeight
 
 JNIEXPORT jboolean JNICALL Java_com_netherairtune_doommc_DoomJNI_isPlayerReady
   (JNIEnv *env, jclass clazz) { 
-    return (jboolean)(initialized && DOOM_IsPlayerReady());
+    return (jboolean)(initialized && DOOM_IsPlayerReady() && !doom_should_exit);
+}
+
+JNIEXPORT jboolean JNICALL Java_com_netherairtune_doommc_DoomJNI_shouldExit
+  (JNIEnv *env, jclass clazz) {
+    return (jboolean)doom_should_exit;
 }
 
 JNIEXPORT void JNICALL Java_com_netherairtune_doommc_DoomJNI_keyDown
   (JNIEnv *env, jclass clazz, jint key) { 
-    if (initialized) DOOM_KeyDown((int)key);
+    if (initialized && !doom_should_exit) {
+        if (setjmp(exit_jmp) == 0) {
+            DOOM_KeyDown((int)key);
+        } else {
+            initialized = 0;
+            doom_should_exit = 1;
+        }
+    }
 }
 
 JNIEXPORT void JNICALL Java_com_netherairtune_doommc_DoomJNI_keyUp
   (JNIEnv *env, jclass clazz, jint key) { 
-    if (initialized) DOOM_KeyUp((int)key);
+    if (initialized && !doom_should_exit) {
+        if (setjmp(exit_jmp) == 0) {
+            DOOM_KeyUp((int)key);
+        } else {
+            initialized = 0;
+            doom_should_exit = 1;
+        }
+    }
 }
 
 JNIEXPORT void JNICALL Java_com_netherairtune_doommc_DoomJNI_mouseMove
   (JNIEnv *env, jclass clazz, jint x, jint y) { 
-    if (initialized) DOOM_MouseMove((int)x, (int)y);
+    if (initialized && !doom_should_exit) DOOM_MouseMove((int)x, (int)y);
 }
 
 JNIEXPORT void JNICALL Java_com_netherairtune_doommc_DoomJNI_mouseButton
   (JNIEnv *env, jclass clazz, jint button, jboolean pressed) { 
-    if (initialized) DOOM_MouseButton((int)button, (boolean)pressed);
+    if (initialized && !doom_should_exit) DOOM_MouseButton((int)button, (boolean)pressed);
 }

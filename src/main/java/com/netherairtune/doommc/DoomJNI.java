@@ -12,7 +12,6 @@ public class DoomJNI {
 
     static {
         try {
-        	//added android, fuk
             String os = System.getProperty("os.name").toLowerCase();
             String arch = System.getProperty("os.arch").toLowerCase();
 
@@ -45,38 +44,15 @@ public class DoomJNI {
         }
     }
 
-    // UPDATE: it's still not working but lemme check this change
     private static boolean isAndroid() {
-         /*String vmName = System.getProperty("java.vm.name", "").toLowerCase();
-         String vendor = System.getProperty("java.vendor", "").toLowerCase();
-         String bootPath = System.getProperty("java.boot.class.path", "").toLowerCase();
-    
-         if (vmName.contains("dalvik") || 
-              vmName.contains("art") || 
-              vendor.contains("android") || 
-               vendor.contains("pojav") ||
-               bootPath.contains("android.jar")) {
-               return true;
-        }
-    try {
-        Class.forName("android.os.Build");
-        return true;
-    } catch (ClassNotFoundException e) {
-        return false;
-    }*/
-    
-    //leave it i surrender 
-    try {
+        try {
             DoomConfig.DoomConfigData cfg = DoomConfig.get();
             return cfg.isAndroid;
         } catch (Exception e) {
             return false;
         }
-}
+    }
 
-
-
-    // TODO: just add that bs windows in this
     private static String getPlatformDirectory(String os, String arch) {
         if (isAndroid()) {
             if (arch.contains("aarch64") || arch.contains("arm64")) {
@@ -111,6 +87,7 @@ public class DoomJNI {
     public static native int getWidth();
     public static native int getHeight();
     public static native boolean isPlayerReady();
+    public static native boolean shouldExit();
     public static native void keyDown(int key);
     public static native void keyUp(int key);
     public static native void mouseMove(int x, int y);
