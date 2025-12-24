@@ -95,6 +95,11 @@ JNIEXPORT void JNICALL Java_com_netherairtune_doommc_DoomJNI_doomStep
         DOOM_RenderFrame();
         
         byte* screen = DOOM_GetScreenBuffer();
+        if (screen) {
+             memset(screen, 0, DOOM_WIDTH * DOOM_HEIGHT);
+        }
+
+
         byte* palette = DOOM_GetPalette();
         
         if (!screen || !palette) return;
