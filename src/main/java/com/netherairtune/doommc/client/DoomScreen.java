@@ -115,14 +115,12 @@ public void render(DrawContext ctx, int mx, int my, float delta) {
         for (int x = 0; x < doomWidth; x++) {
             int i = (y * doomWidth + x) * 4;
 
-            int r = fb[i] & 0xFF;
+            int b = fb[i] & 0xFF;
             int g = fb[i + 1] & 0xFF;
-            int b = fb[i + 2] & 0xFF;
+            int r = fb[i + 2] & 0xFF;
             int a = fb[i + 3] & 0xFF;
 
-            int fy = doomHeight - 1 - y;
-            int abgr = (a << 24) | (b << 16) | (g << 8) | r;
-            image.setColor(x, fy, abgr);
+            image.setColor(x, y, (a << 24) | (b << 16) | (g << 8) | r);
         }
     }
 
@@ -145,7 +143,6 @@ public void render(DrawContext ctx, int mx, int my, float delta) {
 
     super.render(ctx, mx, my, delta);
 }
-
 
 
     @Override
