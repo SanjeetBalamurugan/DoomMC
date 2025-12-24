@@ -97,50 +97,54 @@ public class DoomScreen extends Screen {
     }
 
     @Override
-    public void render(DrawContext ctx, int mx, int my, float delta) {
-        if (wadMissing || !initialized) {
-            super.render(ctx, mx, my, delta);
-            return;
-        }
-
-        if (DoomJNI.shouldExit()) {
-            close();
-            return;
-        }
-
-        DoomJNI.doomStep();
-
-        byte[] fb = DoomJNI.getFramebuffer();
-        for (int y = 0; y < doomHeight; y++) {
-            for (int x = 0; x < doomWidth; x++) {
-                int i = (y * doomWidth + x) * 4;
-                int b = fb[i] & 0xFF;
-                int g = fb[i + 1] & 0xFF;
-                int r = fb[i + 2] & 0xFF;
-                int a = fb[i + 3] & 0xFF;
-                image.setColor(x, y, (a << 24) | (b << 16) | (g << 8) | r);
-            }
-        }
-
-        texture.upload();
-
-        int targetWidth = (int)(this.width * 0.65);
-        int targetHeight = (int)(targetWidth * doomHeight / (float)doomWidth);
-        
-        if (targetHeight > this.height * 0.85) {
-            targetHeight = (int)(this.height * 0.85);
-            targetWidth = (int)(targetHeight * doomWidth / (float)doomHeight);
-        }
-
-        int x = (this.width - targetWidth) / 2;
-        int y = (this.height - targetHeight) / 2;
-
-        RenderSystem.setShader(GameRenderer::getPositionTexProgram);
-        RenderSystem.setShaderTexture(0, textureId);
-        ctx.drawTexture(textureId, x, y, 0, 0, targetWidth, targetHeight, doomWidth, doomHeight);
-        
+public void render(DrawContext ctx, int mx, int my, float delta) {
+    if (wadMissing || !initialized) {
         super.render(ctx, mx, my, delta);
+        return;
     }
+
+    if (DoomJNI.shouldExit()) {
+        close();
+        return;
+    }
+
+    DoomJNI.doomStep();
+
+    byte[] fb = DoomJNI.getFramebuffer();
+    for (int y = 0; y < doomHeight; y++) {
+        for (int x = 0; x < doomWidth; x++) {
+            int i = (y * doomWidth + x) * 4;
+
+            int r = fb[i] & 0xFF;
+            int g = fb[i + 1] & 0xFF;
+            int b = fb[i + 2] & 0xFF;
+            int a = fb[i + 3] & 0xFF;
+
+            int fy = doomHeight - 1 - y;
+            image.setColor(x, fy, NativeImage.packColor(a, r, g, b));
+        }
+    }
+
+    texture.upload();
+
+    int targetWidth = (int) (this.width * 0.65);
+    int targetHeight = (int) (targetWidth * doomHeight / (float) doomWidth);
+
+    if (targetHeight > this.height * 0.85) {
+        targetHeight = (int) (this.height * 0.85);
+        targetWidth = (int) (targetHeight * doomWidth / (float) doomHeight);
+    }
+
+    int x = (this.width - targetWidth) / 2;
+    int y = (this.height - targetHeight) / 2;
+
+    RenderSystem.setShader(GameRenderer::getPositionTexProgram);
+    RenderSystem.setShaderTexture(0, textureId);
+    ctx.drawTexture(textureId, x, y, 0, 0, targetWidth, targetHeight, doomWidth, doomHeight);
+
+    super.render(ctx, mx, my, delta);
+}
+
 
     @Override
     public boolean keyPressed(int key, int sc, int mods) {
