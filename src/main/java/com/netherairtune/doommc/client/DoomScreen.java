@@ -16,6 +16,7 @@ import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL12;
 
+import javax.sound.sampled.*;
 import java.io.File;
 
 public class DoomScreen extends Screen {
@@ -43,6 +44,8 @@ public class DoomScreen extends Screen {
 
     private static final int TITLE_BAR_HEIGHT = 24;
     private static final int WINDOW_BORDER = 2;
+
+    private SourceDataLine audioLine;
 
     public DoomScreen() {
         super(Text.literal("Doom"));
@@ -80,18 +83,8 @@ public class DoomScreen extends Screen {
             initialized = true;
         }
 
-        float aspectRatio = (float) doomWidth / (float) doomHeight;
-        
-        int availableWidth = this.width - 40;
-        int availableHeight = this.height - 40;
-        
-        if (availableWidth / aspectRatio <= availableHeight) {
-            windowWidth = availableWidth;
-            windowHeight = (int) (windowWidth / aspectRatio);
-        } else {
-            windowHeight = availableHeight;
-            windowWidth = (int) (windowHeight * aspectRatio);
-        }
+        windowWidth = this.width - 40;
+        windowHeight = this.height - 40;
         
         windowX = (this.width - windowWidth) / 2;
         windowY = (this.height - windowHeight) / 2;
@@ -111,6 +104,17 @@ public class DoomScreen extends Screen {
                 GLFW.GLFW_CURSOR,
                 GLFW.GLFW_CURSOR_DISABLED
         );
+
+        try {
+            int sampleRate = DoomJNI.getSampleRate();
+            AudioFormat format = new AudioFormat(sampleRate, 16, 2, true, false);
+            DataLine.Info info = new DataLine.Info(SourceDataLine.class, format);
+            audioLine = (SourceDataLine) AudioSystem.getLine(info);
+            audioLine.open(format, 4096);
+            audioLine.start();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -128,6 +132,16 @@ public class DoomScreen extends Screen {
         }
 
         DoomJNI.doomStep();
+
+        short[] audioData = DoomJNI.getAudioBuffer();
+        if (audioData != null && audioLine != null) {
+            byte[] audioBytes = new byte[audioData.length * 2];
+            for (int i = 0; i < audioData.length; i++) {
+                audioBytes[i * 2] = (byte) (audioData[i] & 0xFF);
+                audioBytes[i * 2 + 1] = (byte) ((audioData[i] >> 8) & 0xFF);
+            }
+            audioLine.write(audioBytes, 0, audioBytes.length);
+        }
 
         byte[] fb = DoomJNI.getFramebuffer();
         if (fb.length >= doomWidth * doomHeight * 4) {
@@ -349,6 +363,11 @@ public class DoomScreen extends Screen {
         );
 
         firstMouse = true;
+
+        if (audioLine != null) {
+            audioLine.stop();
+            audioLine.close();
+        }
 
         if (texture != null) texture.close();
         if (image != null) image.close();

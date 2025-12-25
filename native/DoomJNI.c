@@ -22,17 +22,64 @@ void DOOM_MouseButton(int button, boolean pressed);
 
 #define DOOM_WIDTH 320
 #define DOOM_HEIGHT 200
+#define AUDIO_BUFFER_SIZE 2048
+#define SAMPLE_RATE 11025
+#define NUM_CHANNELS 2
 
 static jbyte framebuffer[DOOM_WIDTH * DOOM_HEIGHT * 4];
+static short audio_buffer[AUDIO_BUFFER_SIZE * NUM_CHANNELS];
+static int audio_write_pos = 0;
 static int initialized = 0;
 static jmp_buf exit_jmp;
 static int doom_should_exit = 0;
 
-// Override exit to catch DOOM's exit calls
 void exit(int status) {
     doom_should_exit = 1;
     longjmp(exit_jmp, 1);
 }
+
+void I_InitSound() {
+    memset(audio_buffer, 0, sizeof(audio_buffer));
+    audio_write_pos = 0;
+}
+
+void I_UpdateSound(void) {}
+
+void I_SubmitSound(void) {}
+
+void I_ShutdownSound(void) {}
+
+void I_SetChannels() {}
+
+int I_GetSfxLumpNum(void* sfxinfo) { return 0; }
+
+int I_StartSound(int id, int vol, int sep, int pitch, int priority) {
+    return id;
+}
+
+void I_StopSound(int handle) {}
+
+int I_SoundIsPlaying(int handle) { return 0; }
+
+void I_UpdateSoundParams(int handle, int vol, int sep, int pitch) {}
+
+void I_WriteSamples(short* samples, int num_samples) {
+    for (int i = 0; i < num_samples && audio_write_pos < AUDIO_BUFFER_SIZE; i++) {
+        audio_buffer[audio_write_pos * NUM_CHANNELS] = samples[i];
+        audio_buffer[audio_write_pos * NUM_CHANNELS + 1] = samples[i];
+        audio_write_pos++;
+    }
+}
+
+void I_InitMusic(void) {}
+void I_ShutdownMusic(void) {}
+void I_SetMusicVolume(int volume) {}
+void I_PauseSong(int handle) {}
+void I_ResumeSong(int handle) {}
+int I_RegisterSong(void *data) { return 0; }
+void I_PlaySong(int handle, int looping) {}
+void I_StopSong(int handle) {}
+void I_UnRegisterSong(int handle) {}
 
 JNIEXPORT void JNICALL Java_com_netherairtune_doommc_DoomJNI_doomInit
   (JNIEnv *env, jclass clazz, jobjectArray jargs) {
@@ -73,6 +120,7 @@ JNIEXPORT void JNICALL Java_com_netherairtune_doommc_DoomJNI_doomInit
 
     doom_should_exit = 0;
     if (setjmp(exit_jmp) == 0) {
+        I_InitSound();
         DOOM_Init(argc, argv);
         initialized = 1;
     } else {
@@ -91,6 +139,8 @@ JNIEXPORT void JNICALL Java_com_netherairtune_doommc_DoomJNI_doomStep
     if (!initialized || doom_should_exit) return;
     
     if (setjmp(exit_jmp) == 0) {
+        audio_write_pos = 0;
+        
         DOOM_RunTic();
         DOOM_RenderFrame();
         
@@ -122,6 +172,22 @@ JNIEXPORT jbyteArray JNICALL Java_com_netherairtune_doommc_DoomJNI_getFramebuffe
     if (out == NULL) return NULL;
     (*env)->SetByteArrayRegion(env, out, 0, DOOM_WIDTH * DOOM_HEIGHT * 4, framebuffer);
     return out;
+}
+
+JNIEXPORT jshortArray JNICALL Java_com_netherairtune_doommc_DoomJNI_getAudioBuffer
+  (JNIEnv *env, jclass clazz) {
+    int size = audio_write_pos * NUM_CHANNELS;
+    if (size == 0) return NULL;
+    
+    jshortArray out = (*env)->NewShortArray(env, size);
+    if (out == NULL) return NULL;
+    (*env)->SetShortArrayRegion(env, out, 0, size, (jshort*)audio_buffer);
+    return out;
+}
+
+JNIEXPORT jint JNICALL Java_com_netherairtune_doommc_DoomJNI_getSampleRate
+  (JNIEnv *env, jclass clazz) {
+    return SAMPLE_RATE;
 }
 
 JNIEXPORT jint JNICALL Java_com_netherairtune_doommc_DoomJNI_getWidth
