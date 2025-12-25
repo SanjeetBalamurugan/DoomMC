@@ -76,25 +76,13 @@ jobs:
       - name: Build Android arm64 JNI
         run: ./gradlew configureJNI_android-arm64 buildJNI_android-arm64 copyJNILib_android-arm64 --no-daemon
 
-      # ---- Windows x86 ----
+      # ---- Windows x86 JNI ----
       - name: Build Windows x86 JNI
-        run: |
-          cmake -S native -B build/windows-x86 \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_TOOLCHAIN_FILE=$(pwd)/native/toolchains/windows-x86.cmake
-          cmake --build build/windows-x86
-          mkdir -p native/windows-x86
-          find build/windows-x86 -name "doomjni.*" -exec cp {} native/windows-x86/ \;
+        run: ./gradlew configureJNI_windows-x86 buildJNI_windows-x86 copyJNILib_windows-x86 --no-daemon
 
-      # ---- Windows x86_64 ----
+      # ---- Windows x86_64 JNI ----
       - name: Build Windows x86_64 JNI
-        run: |
-          cmake -S native -B build/windows-x86_64 \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_TOOLCHAIN_FILE=$(pwd)/native/toolchains/windows-x86_64.cmake
-          cmake --build build/windows-x86_64
-          mkdir -p native/windows-x86_64
-          find build/windows-x86_64 -name "doomjni.*" -exec cp {} native/windows-x86_64/ \;
+        run: ./gradlew configureJNI_windows-x86_64 buildJNI_windows-x86_64 copyJNILib_windows-x86_64 --no-daemon
 
       # ---- Build mod JAR ----
       - name: Build mod
