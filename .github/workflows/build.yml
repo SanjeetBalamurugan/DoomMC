@@ -5,17 +5,18 @@ on:
   pull_request:
 
 jobs:
-  build:
+  # -------------------------------
+  # Build Linux + Android JNI
+  # -------------------------------
+  linux_android:
     runs-on: ubuntu-24.04
-
+    outputs:
+      artifact-path: ${{ steps.upload.outputs.artifact-path }}
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
-
-      - name: Install build tools
-        run: sudo apt-get update && sudo apt-get install -y build-essential wget
 
       - name: Install CMake 4.2.0
         run: |
@@ -32,10 +33,7 @@ jobs:
           sudo apt-get install -y \
             gcc-aarch64-linux-gnu \
             g++-aarch64-linux-gnu \
-            binutils-aarch64-linux-gnu \
-            mingw-w64 \
-            gcc-mingw-w64-x86-64 \
-            gcc-mingw-w64-i686
+            binutils-aarch64-linux-gnu
 
       - name: Set up JDK
         uses: actions/setup-java@v4
@@ -65,35 +63,65 @@ jobs:
       # ---- Linux aarch64 ----
       - name: Build Linux aarch64 JNI
         run: |
-          cmake -S native -B build/linux-aarch64 \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_TOOLCHAIN_FILE=$(pwd)/native/toolchains/linux-aarch64.cmake
+          cmake -S native -B build/linux-aarch64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=native/toolchains/linux-aarch64.cmake
           cmake --build build/linux-aarch64
           mkdir -p native/linux-aarch64
           find build/linux-aarch64 -name "doomjni.*" -exec cp {} native/linux-aarch64/ \;
 
       # ---- Android arm64 ----
       - name: Build Android arm64 JNI
-        run: ./gradlew configureJNI_android-arm64 buildJNI_android-arm64 copyJNILib_android-arm64 --no-daemon
-
-      # ---- Windows x86 JNI ----
-      - name: Build Windows x86 JNI
-        run: ./gradlew configureJNI_windows-x86 buildJNI_windows-x86 copyJNILib_windows-x86 --no-daemon
-
-      # ---- Windows x86_64 JNI ----
-      - name: Build Windows x86_64 JNI
-        run: ./gradlew configureJNI_windows-x86_64 buildJNI_windows-x86_64 copyJNILib_windows-x86_64 --no-daemon
+        run: |
+          ./gradlew configureJNI_android-arm64 buildJNI_android-arm64 copyJNILib_android-arm64 --no-daemon
 
       # ---- Build mod JAR ----
       - name: Build mod
         run: ./gradlew build --no-daemon
 
-      # ---- Upload artifacts ----
-      - name: Upload DoomMC multi-arch artifact
+      - name: Upload Linux/Android artifact
+        id: upload
         uses: actions/upload-artifact@v4
         with:
-          name: DoomMC-multi-arch
+          name: DoomMC-linux-android
           path: |
             build/libs/*.jar
             build/resources/main/native/**/libdoomjni.so
-            native/**/doomjni.*
+            native/linux-*
+
+  # -------------------------------
+  # Build Windows JNI
+  # -------------------------------
+  windows:
+    runs-on: windows-latest
+    needs: linux_android
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install CMake
+        run: choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' --yes
+
+      - name: Prepare Gradle
+        run: gradlew.bat --version
+
+      # ---- Windows x86 ----
+      - name: Build Windows x86 JNI
+        run: gradlew.bat configureJNI_windows-x86 buildJNI_windows-x86 copyJNILib_windows-x86 --no-daemon
+
+      # ---- Windows x86_64 ----
+      - name: Build Windows x86_64 JNI
+        run: gradlew.bat configureJNI_windows-x86_64 buildJNI_windows-x86_64 copyJNILib_windows-x86_64 --no-daemon
+
+      # ---- Upload Windows artifact ----
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DoomMC-windows
+          path: native/windows-*
