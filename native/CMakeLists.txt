@@ -19,14 +19,13 @@ target_include_directories(doomjni PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../DOOM/linuxdoom-1.10
 )
 
-target_link_libraries(doomjni PRIVATE
-    $<LINK_LIBRARY:WHOLE_ARCHIVE,doomheadless>
-    m
-)
-
-target_link_options(doomjni PRIVATE
-    -Wl,--no-undefined
-)
+if (MSVC)
+    target_link_libraries(doomjni PRIVATE doomheadless)
+    target_link_options(doomjni PRIVATE "/WHOLEARCHIVE:doomheadless.lib")
+else()
+    target_link_libraries(doomjni PRIVATE $<LINK_LIBRARY:WHOLE_ARCHIVE,doomheadless> m)
+    target_link_options(doomjni PRIVATE -Wl,--no-undefined)
+endif()
 
 set_target_properties(doomjni PROPERTIES
     OUTPUT_NAME "doomjni"
