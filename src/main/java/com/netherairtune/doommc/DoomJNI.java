@@ -62,10 +62,12 @@ public class DoomJNI {
         }
 
         if (arch.contains("aarch64") || arch.contains("arm64")) {
-            arch = "aarch64";
-        } else if (arch.contains("amd64") || arch.contains("x86_64")) {
-            arch = "x86_64";
-        }
+        arch = "aarch64";
+    } else if (arch.contains("amd64") || arch.contains("x86_64")) {
+        arch = "x86_64";
+    } else if (arch.contains("x86") || arch.contains("i386") || arch.contains("i686")) {
+        arch = "x86";
+    }
 
         if (os.contains("linux")) {
             return "linux-" + arch;
@@ -80,10 +82,11 @@ public class DoomJNI {
         throw new UnsupportedOperationException(os + " " + arch);
     }
 
-    // Native methods
     public static native void doomInit(String[] args);
     public static native void doomStep();
     public static native byte[] getFramebuffer();
+    public static native short[] getAudioBuffer();
+    public static native int getSampleRate();
     public static native int getWidth();
     public static native int getHeight();
     public static native boolean isPlayerReady();
@@ -93,7 +96,6 @@ public class DoomJNI {
     public static native void mouseMove(int x, int y);
     public static native void mouseButton(int button, boolean pressed);
 
-    // Key constants
     public static final int KEY_RIGHTARROW = 0xae;
     public static final int KEY_LEFTARROW = 0xac;
     public static final int KEY_UPARROW = 0xad;
@@ -121,7 +123,6 @@ public class DoomJNI {
     public static final int KEY_RCTRL = 0x80 + 0x1d;
     public static final int KEY_RALT = 0x80 + 0x38;
     
-    // Mouse constants
     public static final int MOUSE_LEFT = 1;
     public static final int MOUSE_MIDDLE = 2;
     public static final int MOUSE_RIGHT = 4;
