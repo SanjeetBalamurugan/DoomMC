@@ -11,7 +11,7 @@ jobs:
   linux_android:
     runs-on: ubuntu-24.04
     outputs:
-      artifact-path: ${{ steps.upload.outputs.artifact-path }}
+      artifact-path: DoomMC-linux-android
     steps:
       - uses: actions/checkout@v4
         with:
@@ -70,15 +70,14 @@ jobs:
 
       # ---- Android arm64 ----
       - name: Build Android arm64 JNI
-        run: |
-          ./gradlew configureJNI_android-arm64 buildJNI_android-arm64 copyJNILib_android-arm64 --no-daemon
+        run: ./gradlew configureJNI_android-arm64 buildJNI_android-arm64 copyJNILib_android-arm64 --no-daemon
 
       # ---- Build mod JAR ----
       - name: Build mod
         run: ./gradlew build --no-daemon
 
+      # ---- Upload Linux/Android artifact ----
       - name: Upload Linux/Android artifact
-        id: upload
         uses: actions/upload-artifact@v4
         with:
           name: DoomMC-linux-android
@@ -86,7 +85,7 @@ jobs:
             build/libs/*.jar
             build/resources/main/native/**/libdoomjni.so
             native/linux-*
-
+  
   # -------------------------------
   # Build Windows JNI
   # -------------------------------
@@ -125,3 +124,35 @@ jobs:
         with:
           name: DoomMC-windows
           path: native/windows-*
+
+  # -------------------------------
+  # Package all artifacts into one multi-arch JAR
+  # -------------------------------
+  package:
+    runs-on: ubuntu-24.04
+    needs: [linux_android, windows]
+    steps:
+      - name: Download Linux/Android artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: DoomMC-linux-android
+          path: artifacts/linux-android
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: DoomMC-windows
+          path: artifacts/windows
+
+      - name: Merge JNI libraries
+        run: |
+          mkdir -p merged/native
+          cp -r artifacts/linux-android/native/* merged/native/
+          cp -r artifacts/windows/native/* merged/native/
+          cp artifacts/linux-android/build/libs/*.jar merged/DoomMC.jar
+
+      - name: Upload final multi-arch JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: DoomMC-multi-arch
+          path: merged/
