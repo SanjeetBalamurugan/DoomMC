@@ -24,8 +24,8 @@ public class DoomScreen extends Screen {
     private NativeImageBackedTexture texture;
     private Identifier textureId;
 
-    private int doomWidth = 640;
-    private int doomHeight = 400;
+    private int doomWidth = 320;
+    private int doomHeight = 200;
 
     private boolean initialized = false;
     private boolean wadMissing = false;
@@ -75,8 +75,6 @@ public class DoomScreen extends Screen {
             DoomJNI.doomInit(new String[]{
                     "doomjni",
                     "-iwad", wad.getAbsolutePath(),
-                    "-width", String.valueOf(doomWidth),
-                    "-height", String.valueOf(doomHeight),
                     "-skill", "3"
             });
             initialized = true;
@@ -123,14 +121,16 @@ public class DoomScreen extends Screen {
         DoomJNI.doomStep();
 
         byte[] fb = DoomJNI.getFramebuffer();
-        for (int y = 0; y < doomHeight; y++) {
-            for (int x = 0; x < doomWidth; x++) {
-                int i = (y * doomWidth + x) * 4;
-                int b = fb[i] & 0xFF;
-                int g = fb[i + 1] & 0xFF;
-                int r = fb[i + 2] & 0xFF;
-                int a = fb[i + 3] & 0xFF;
-                image.setColor(x, y, (a << 24) | (b << 16) | (g << 8) | r);
+        if (fb.length >= doomWidth * doomHeight * 4) {
+            for (int y = 0; y < doomHeight; y++) {
+                for (int x = 0; x < doomWidth; x++) {
+                    int i = (y * doomWidth + x) * 4;
+                    int b = fb[i] & 0xFF;
+                    int g = fb[i + 1] & 0xFF;
+                    int r = fb[i + 2] & 0xFF;
+                    int a = fb[i + 3] & 0xFF;
+                    image.setColor(x, y, (a << 24) | (b << 16) | (g << 8) | r);
+                }
             }
         }
 
