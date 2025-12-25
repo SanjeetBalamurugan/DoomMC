@@ -81,8 +81,17 @@ public class DoomScreen extends Screen {
         }
 
         float aspectRatio = (float) doomWidth / (float) doomHeight;
-        windowHeight = (int) (this.height * 0.8f);
-        windowWidth = (int) (windowHeight * aspectRatio);
+        
+        int availableWidth = this.width - 40;
+        int availableHeight = this.height - 40;
+        
+        if (availableWidth / aspectRatio <= availableHeight) {
+            windowWidth = availableWidth;
+            windowHeight = (int) (windowWidth / aspectRatio);
+        } else {
+            windowHeight = availableHeight;
+            windowWidth = (int) (windowHeight * aspectRatio);
+        }
         
         windowX = (this.width - windowWidth) / 2;
         windowY = (this.height - windowHeight) / 2;
