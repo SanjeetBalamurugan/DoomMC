@@ -37,8 +37,17 @@ def architectures = [
     'android-arm64': [
         toolchain: 'toolchains/android-arm64.cmake',
         outputDir: 'android-arm64'
+    ],
+    'windows-x86': [
+        toolchain: 'toolchains/windows-x86.cmake',
+        outputDir: 'windows-x86'
+    ],
+    'windows-x86_64': [
+        toolchain: 'toolchains/windows-x86_64.cmake',
+        outputDir: 'windows-x86_64'
     ]
 ]
+
 
 architectures.each { archName, config ->
     tasks.register("configureJNI_${archName}", Exec) {
