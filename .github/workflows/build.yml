@@ -1,34 +1,25 @@
 name: Build DoomMC Multi-Arch
 
-on:
-  push:
-  pull_request:
+on: [push, pull_request]
 
 jobs:
   build-linux:
     runs-on: ubuntu-24.04
-    strategy:
-      matrix:
-        platform: [linux-x86_64, linux-aarch64, android-arm64]
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-          fetch-depth: 0
 
-      - name: Install CMake 4.2.0
+      - name: Install CMake & Toolchains
         run: |
           wget https://github.com/Kitware/CMake/releases/download/v4.2.0/cmake-4.2.0-linux-x86_64.sh
           chmod +x cmake-4.2.0-linux-x86_64.sh
           sudo mkdir -p /opt/cmake
           sudo ./cmake-4.2.0-linux-x86_64.sh --prefix=/opt/cmake --skip-license
           sudo ln -sf /opt/cmake/bin/cmake /usr/local/bin/cmake
-          cmake --version
-
-      - name: Install cross toolchains
-        run: |
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu binutils-aarch64-linux-gnu
+          cmake --version
 
       - name: Set up JDK
         uses: actions/setup-java@v4
@@ -40,33 +31,26 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: Export Android NDK
-        run: |
-          NDK_PATH=$(ls -d $ANDROID_SDK_ROOT/ndk/* | sort -V | tail -n1)
-          echo "ANDROID_NDK=$NDK_PATH" >> $GITHUB_ENV
+        run: echo "ANDROID_NDK=$(ls -d $ANDROID_SDK_ROOT/ndk/* | sort -V | tail -n1)" >> $GITHUB_ENV
 
       - name: Prepare Gradle
         run: chmod +x ./gradlew
 
-      - name: Build JNI
-        run: |
-          if [ "${{ matrix.platform }}" = "linux-x86_64" ]; then
-            ./gradlew configureJNI_linux-x86_64 buildJNI_linux-x86_64 copyJNILib_linux-x86_64 --no-daemon
-          elif [ "${{ matrix.platform }}" = "linux-aarch64" ]; then
-            ./gradlew configureJNI_linux-aarch64 buildJNI_linux-aarch64 copyJNILib_linux-aarch64 --no-daemon
-          elif [ "${{ matrix.platform }}" = "android-arm64" ]; then
-            ./gradlew configureJNI_android-arm64 buildJNI_android-arm64 copyJNILib_android-arm64 --no-daemon
-          fi
+      - name: Build Linux x86_64 JNI
+        run: ./gradlew configureJNI_linux-x86_64 buildJNI_linux-x86_64 copyJNILib_linux-x86_64 --no-daemon
+
+      - name: Build Linux aarch64 JNI
+        run: ./gradlew configureJNI_linux-aarch64 buildJNI_linux-aarch64 copyJNILib_linux-aarch64 --no-daemon
+
+      - name: Build Android arm64 JNI
+        run: ./gradlew configureJNI_android-arm64 buildJNI_android-arm64 copyJNILib_android-arm64 --no-daemon
 
   build-windows:
     runs-on: windows-latest
-    strategy:
-      matrix:
-        platform: [windows-x86, windows-x86_64]
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-          fetch-depth: 0
 
       - name: Set up JDK
         uses: actions/setup-java@v4
@@ -75,24 +59,21 @@ jobs:
           java-version: 21
 
       - name: Prepare Gradle
-        run: chmod +x gradlew
+        run: chmod +x ./gradlew
 
-      - name: Build Windows JNI
-        run: |
-          if [ "${{ matrix.platform }}" = "windows-x86" ]; then
-            ./gradlew configureJNI_windows-x86 buildJNI_windows-x86 copyJNILib_windows-x86 --no-daemon
-          elif [ "${{ matrix.platform }}" = "windows-x86_64" ]; then
-            ./gradlew configureJNI_windows-x86_64 buildJNI_windows-x86_64 copyJNILib_windows-x86_64 --no-daemon
-          fi
+      - name: Build Windows x86 JNI
+        run: ./gradlew configureJNI_windows-x86 buildJNI_windows-x86 copyJNILib_windows-x86 --no-daemon
 
-  build-mod:
+      - name: Build Windows x86_64 JNI
+        run: ./gradlew configureJNI_windows-x86_64 buildJNI_windows-x86_64 copyJNILib_windows-x86_64 --no-daemon
+
+  build-jar:
     runs-on: ubuntu-24.04
     needs: [build-linux, build-windows]
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-          fetch-depth: 0
 
       - name: Set up JDK
         uses: actions/setup-java@v4
@@ -103,19 +84,17 @@ jobs:
       - name: Prepare Gradle
         run: chmod +x ./gradlew
 
-      - name: Copy all JNI libs into resources
+      - name: Copy all JNI libraries into resources
         run: |
-          mkdir -p src/main/resources/native
-          cp -r build/resources/main/native/* src/main/resources/native/ || true
-          cp -r native/* src/main/resources/native/ || true
+          mkdir -p build/resources/main/native
+          cp -r build-linux/build/resources/main/native/* build/resources/main/native/
+          cp -r build-windows/build/resources/main/native/* build/resources/main/native/
 
-      - name: Build mod JAR
+      - name: Build final multi-arch JAR
         run: ./gradlew build --no-daemon
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: DoomMC-multi-arch
-          path: |
-            build/libs/*.jar
-            src/main/resources/native/**/libdoomjni*
+          path: build/libs/*.jar
