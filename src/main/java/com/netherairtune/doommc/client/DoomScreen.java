@@ -24,8 +24,8 @@ public class DoomScreen extends Screen {
     private NativeImageBackedTexture texture;
     private Identifier textureId;
 
-    private final int doomWidth = 320;
-    private final int doomHeight = 200;
+    private int doomWidth = 640;
+    private int doomHeight = 400;
 
     private boolean initialized = false;
     private boolean wadMissing = false;
@@ -33,8 +33,19 @@ public class DoomScreen extends Screen {
     private int lastMouseX;
     private boolean firstMouse = true;
 
+    private int windowWidth;
+    private int windowHeight;
+    private int windowX;
+    private int windowY;
+    private boolean dragging = false;
+    private int dragOffsetX;
+    private int dragOffsetY;
+
+    private static final int TITLE_BAR_HEIGHT = 24;
+    private static final int WINDOW_BORDER = 2;
+
     public DoomScreen() {
-        super(Text.literal(""));
+        super(Text.literal("Doom"));
     }
 
     @Override
@@ -64,10 +75,19 @@ public class DoomScreen extends Screen {
             DoomJNI.doomInit(new String[]{
                     "doomjni",
                     "-iwad", wad.getAbsolutePath(),
+                    "-width", String.valueOf(doomWidth),
+                    "-height", String.valueOf(doomHeight),
                     "-skill", "3"
             });
             initialized = true;
         }
+
+        float aspectRatio = (float) doomWidth / (float) doomHeight;
+        windowHeight = (int) (this.height * 0.8f);
+        windowWidth = (int) (windowHeight * aspectRatio);
+        
+        windowX = (this.width - windowWidth) / 2;
+        windowY = (this.height - windowHeight) / 2;
 
         image = new NativeImage(doomWidth, doomHeight, false);
         texture = new NativeImageBackedTexture(image);
@@ -84,20 +104,12 @@ public class DoomScreen extends Screen {
                 GLFW.GLFW_CURSOR,
                 GLFW.GLFW_CURSOR_DISABLED
         );
-
-        addDrawableChild(ButtonWidget.builder(
-                Text.literal("Close"),
-                b -> close()
-        ).dimensions(
-                this.width - 90,
-                10,
-                80,
-                20
-        ).build());
     }
 
     @Override
     public void render(DrawContext ctx, int mx, int my, float delta) {
+        renderBackground(ctx, mx, my, delta);
+
         if (wadMissing || !initialized) {
             super.render(ctx, mx, my, delta);
             return;
@@ -124,15 +136,40 @@ public class DoomScreen extends Screen {
 
         texture.upload();
 
-        // Fullscreen rendering
-        int targetWidth = this.width;
-        int targetHeight = this.height;
-        int x = 0;
-        int y = 0;
+        ctx.fill(windowX - WINDOW_BORDER, windowY - TITLE_BAR_HEIGHT - WINDOW_BORDER, 
+                 windowX + windowWidth + WINDOW_BORDER, windowY + windowHeight + WINDOW_BORDER, 
+                 0xFF3C3C3C);
+
+        ctx.fill(windowX, windowY - TITLE_BAR_HEIGHT, 
+                 windowX + windowWidth, windowY, 
+                 0xFF1E1E1E);
+        
+        String title = "Doom (Shareware) - " + doomWidth + "x" + doomHeight;
+        ctx.drawText(client.textRenderer, title, 
+                     windowX + 8, windowY - TITLE_BAR_HEIGHT + 8, 
+                     0xFFFFFF, true);
+
+        int buttonSize = 16;
+        int buttonY = windowY - TITLE_BAR_HEIGHT + 4;
+        int closeX = windowX + windowWidth - buttonSize - 4;
+        int maxX = closeX - buttonSize - 4;
+        int minX = maxX - buttonSize - 4;
+
+        ctx.fill(closeX, buttonY, closeX + buttonSize, buttonY + buttonSize, 0xFFE81123);
+        ctx.drawText(client.textRenderer, "×", closeX + 4, buttonY + 4, 0xFFFFFF, false);
+
+        ctx.fill(maxX, buttonY, maxX + buttonSize, buttonY + buttonSize, 0xFF666666);
+        ctx.drawText(client.textRenderer, "□", maxX + 4, buttonY + 4, 0xFFFFFF, false);
+
+        ctx.fill(minX, buttonY, minX + buttonSize, buttonY + buttonSize, 0xFF666666);
+        ctx.drawText(client.textRenderer, "—", minX + 4, buttonY + 4, 0xFFFFFF, false);
+
+        ctx.fill(windowX, windowY, windowX + windowWidth, windowY + windowHeight, 0xFF000000);
 
         RenderSystem.setShader(GameRenderer::getPositionTexProgram);
         RenderSystem.setShaderTexture(0, textureId);
-        ctx.drawTexture(textureId, x, y, 0, 0, targetWidth, targetHeight, doomWidth, doomHeight);
+        ctx.drawTexture(textureId, windowX, windowY, 0, 0, 
+                       windowWidth, windowHeight, doomWidth, doomHeight);
 
         super.render(ctx, mx, my, delta);
     }
@@ -159,6 +196,12 @@ public class DoomScreen extends Screen {
 
     @Override
     public void mouseMoved(double x, double y) {
+        if (dragging) {
+            windowX = (int) x - dragOffsetX;
+            windowY = (int) y - dragOffsetY + TITLE_BAR_HEIGHT;
+            return;
+        }
+
         if (firstMouse) {
             lastMouseX = (int) x;
             firstMouse = false;
@@ -173,20 +216,46 @@ public class DoomScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double x, double y, int button) {
-        if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
-            DoomJNI.keyDown(DoomJNI.KEY_RCTRL);
+        if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT &&
+            x >= windowX && x <= windowX + windowWidth &&
+            y >= windowY - TITLE_BAR_HEIGHT && y < windowY) {
+            
+            int buttonSize = 16;
+            int buttonY = windowY - TITLE_BAR_HEIGHT + 4;
+            int closeX = windowX + windowWidth - buttonSize - 4;
+            
+            if (x >= closeX && x <= closeX + buttonSize &&
+                y >= buttonY && y <= buttonY + buttonSize) {
+                close();
+                return true;
+            }
+            
+            dragging = true;
+            dragOffsetX = (int) x - windowX;
+            dragOffsetY = (int) y - windowY + TITLE_BAR_HEIGHT;
             return true;
         }
-        if (button == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
-            DoomJNI.keyDown(' ');
-            return true;
+
+        if (x >= windowX && x <= windowX + windowWidth &&
+            y >= windowY && y <= windowY + windowHeight) {
+            
+            if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+                DoomJNI.keyDown(DoomJNI.KEY_RCTRL);
+                return true;
+            }
+            if (button == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
+                DoomJNI.keyDown(' ');
+                return true;
+            }
         }
+        
         return super.mouseClicked(x, y, button);
     }
 
     @Override
     public boolean mouseReleased(double x, double y, int button) {
         if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+            dragging = false;
             DoomJNI.keyUp(DoomJNI.KEY_RCTRL);
             return true;
         }
@@ -279,5 +348,16 @@ public class DoomScreen extends Screen {
     }
 
     @Override
-    public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {}
+    public boolean shouldPause() {
+        return false;
+    }
+
+    @Override
+    public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
+        if (this.client != null && this.client.world != null) {
+            context.fillGradient(0, 0, this.width, this.height, 0x00000000, 0x00000000);
+        } else {
+            super.renderBackground(context, mouseX, mouseY, delta);
+        }
+    }
 }
