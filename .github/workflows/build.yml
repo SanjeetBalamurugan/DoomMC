@@ -1,11 +1,15 @@
 name: Build DoomMC Multi-Arch
 
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
 
 jobs:
-  build:
+  build-linux:
     runs-on: ubuntu-24.04
-
+    strategy:
+      matrix:
+        platform: [linux-x86_64, linux-aarch64, android-arm64]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -24,10 +28,7 @@ jobs:
       - name: Install cross toolchains
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            build-essential ninja-build \
-            gcc-aarch64-linux-gnu g++-aarch64-linux-gnu binutils-aarch64-linux-gnu \
-            mingw-w64 gcc-mingw-w64-x86-64 gcc-mingw-w64-i686
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu binutils-aarch64-linux-gnu
 
       - name: Set up JDK
         uses: actions/setup-java@v4
@@ -46,35 +47,75 @@ jobs:
       - name: Prepare Gradle
         run: chmod +x ./gradlew
 
-      # ---- Build Linux x86_64 JNI ----
-      - name: Build Linux x86_64 JNI
-        run: ./gradlew configureJNI_linux-x86_64 buildJNI_linux-x86_64 copyJNILib_linux-x86_64 --no-daemon
+      - name: Build JNI
+        run: |
+          if [ "${{ matrix.platform }}" = "linux-x86_64" ]; then
+            ./gradlew configureJNI_linux-x86_64 buildJNI_linux-x86_64 copyJNILib_linux-x86_64 --no-daemon
+          elif [ "${{ matrix.platform }}" = "linux-aarch64" ]; then
+            ./gradlew configureJNI_linux-aarch64 buildJNI_linux-aarch64 copyJNILib_linux-aarch64 --no-daemon
+          elif [ "${{ matrix.platform }}" = "android-arm64" ]; then
+            ./gradlew configureJNI_android-arm64 buildJNI_android-arm64 copyJNILib_android-arm64 --no-daemon
+          fi
 
-      # ---- Build Linux aarch64 JNI ----
-      - name: Build Linux aarch64 JNI
-        run: ./gradlew configureJNI_linux-aarch64 buildJNI_linux-aarch64 copyJNILib_linux-aarch64 --no-daemon
+  build-windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        platform: [windows-x86, windows-x86_64]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
 
-      # ---- Build Android arm64 JNI ----
-      - name: Build Android arm64 JNI
-        run: ./gradlew configureJNI_android-arm64 buildJNI_android-arm64 copyJNILib_android-arm64 --no-daemon
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
 
-      # ---- Build Windows x86 JNI ----
-      - name: Build Windows x86 JNI
-        run: ./gradlew configureJNI_windows-x86 buildJNI_windows-x86 copyJNILib_windows-x86 --no-daemon
+      - name: Prepare Gradle
+        run: chmod +x gradlew
 
-      # ---- Build Windows x86_64 JNI ----
-      - name: Build Windows x86_64 JNI
-        run: ./gradlew configureJNI_windows-x86_64 buildJNI_windows-x86_64 copyJNILib_windows-x86_64 --no-daemon
+      - name: Build Windows JNI
+        run: |
+          if [ "${{ matrix.platform }}" = "windows-x86" ]; then
+            ./gradlew configureJNI_windows-x86 buildJNI_windows-x86 copyJNILib_windows-x86 --no-daemon
+          elif [ "${{ matrix.platform }}" = "windows-x86_64" ]; then
+            ./gradlew configureJNI_windows-x86_64 buildJNI_windows-x86_64 copyJNILib_windows-x86_64 --no-daemon
+          fi
 
-      # ---- Build mod JAR ----
+  build-mod:
+    runs-on: ubuntu-24.04
+    needs: [build-linux, build-windows]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Prepare Gradle
+        run: chmod +x ./gradlew
+
+      - name: Copy all JNI libs into resources
+        run: |
+          mkdir -p src/main/resources/native
+          cp -r build/resources/main/native/* src/main/resources/native/ || true
+          cp -r native/* src/main/resources/native/ || true
+
       - name: Build mod JAR
         run: ./gradlew build --no-daemon
 
-      # ---- Upload artifacts ----
-      - name: Upload DoomMC multi-arch artifact
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: DoomMC-multi-arch
           path: |
             build/libs/*.jar
-            build/resources/main/native/**/libdoomjni.so
+            src/main/resources/native/**/libdoomjni*
