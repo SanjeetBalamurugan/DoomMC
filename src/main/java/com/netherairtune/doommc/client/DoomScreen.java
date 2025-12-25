@@ -124,19 +124,11 @@ public class DoomScreen extends Screen {
 
         texture.upload();
 
-        // Calculate proper aspect ratio maintaining DOOM's native 320:200 (8:5)
-        float doomAspect = (float) doomWidth / doomHeight;
-        
-        int targetWidth = (int)(this.width * 0.8f);
-        int targetHeight = (int)(targetWidth / doomAspect);
-        
-        if (targetHeight > this.height * 0.9f) {
-            targetHeight = (int)(this.height * 0.9f);
-            targetWidth = (int)(targetHeight * doomAspect);
-        }
-
-        int x = (this.width - targetWidth) / 2;
-        int y = (this.height - targetHeight) / 2;
+        // Fullscreen rendering
+        int targetWidth = this.width;
+        int targetHeight = this.height;
+        int x = 0;
+        int y = 0;
 
         RenderSystem.setShader(GameRenderer::getPositionTexProgram);
         RenderSystem.setShaderTexture(0, textureId);
