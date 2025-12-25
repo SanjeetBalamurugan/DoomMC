@@ -97,54 +97,53 @@ public class DoomScreen extends Screen {
     }
 
     @Override
-public void render(DrawContext ctx, int mx, int my, float delta) {
-    if (wadMissing || !initialized) {
-        super.render(ctx, mx, my, delta);
-        return;
-    }
-
-    if (DoomJNI.shouldExit()) {
-        close();
-        return;
-    }
-
-    DoomJNI.doomStep();
-
-    byte[] fb = DoomJNI.getFramebuffer();
-    for (int y = 0; y < doomHeight; y++) {
-        for (int x = 0; x < doomWidth; x++) {
-            int i = (y * doomWidth + x) * 4;
-
-            int b = fb[i] & 0xFF;
-            int g = fb[i + 1] & 0xFF;
-            int r = fb[i + 2] & 0xFF;
-            int a = fb[i + 3] & 0xFF;
-
-            image.setColor(x, y, (a << 24) | (b << 16) | (g << 8) | r);
+    public void render(DrawContext ctx, int mx, int my, float delta) {
+        if (wadMissing || !initialized) {
+            super.render(ctx, mx, my, delta);
+            return;
         }
+
+        if (DoomJNI.shouldExit()) {
+            close();
+            return;
+        }
+
+        DoomJNI.doomStep();
+
+        byte[] fb = DoomJNI.getFramebuffer();
+        for (int y = 0; y < doomHeight; y++) {
+            for (int x = 0; x < doomWidth; x++) {
+                int i = (y * doomWidth + x) * 4;
+                int b = fb[i] & 0xFF;
+                int g = fb[i + 1] & 0xFF;
+                int r = fb[i + 2] & 0xFF;
+                int a = fb[i + 3] & 0xFF;
+                image.setColor(x, y, (a << 24) | (b << 16) | (g << 8) | r);
+            }
+        }
+
+        texture.upload();
+
+        // Calculate proper aspect ratio maintaining DOOM's native 320:200 (8:5)
+        float doomAspect = (float) doomWidth / doomHeight;
+        
+        int targetWidth = (int)(this.width * 0.8f);
+        int targetHeight = (int)(targetWidth / doomAspect);
+        
+        if (targetHeight > this.height * 0.9f) {
+            targetHeight = (int)(this.height * 0.9f);
+            targetWidth = (int)(targetHeight * doomAspect);
+        }
+
+        int x = (this.width - targetWidth) / 2;
+        int y = (this.height - targetHeight) / 2;
+
+        RenderSystem.setShader(GameRenderer::getPositionTexProgram);
+        RenderSystem.setShaderTexture(0, textureId);
+        ctx.drawTexture(textureId, x, y, 0, 0, targetWidth, targetHeight, doomWidth, doomHeight);
+
+        super.render(ctx, mx, my, delta);
     }
-
-    texture.upload();
-
-    int screenWidth = this.width;
-    int screenHeight = this.height;
-    
-    float scaleX = (float) screenWidth / doomWidth;
-    float scaleY = (float) screenHeight / doomHeight;
-    float scale = Math.min(scaleX, scaleY); 
-
-    int targetWidth = (int) (doomWidth * scale);
-    int targetHeight = (int) (doomHeight * scale);
-
-    int x = (screenWidth - targetWidth) / 2;
-    int y = (screenHeight - targetHeight) / 2;
-
-    RenderSystem.setShader(GameRenderer::getPositionTexProgram);
-    RenderSystem.setShaderTexture(0, textureId);
-    ctx.drawTexture(textureId, x, y, 0, 0, targetWidth, targetHeight, doomWidth, doomHeight);
-
-    super.render(ctx, mx, my, delta);
-}
 
     @Override
     public boolean keyPressed(int key, int sc, int mods) {
@@ -288,6 +287,5 @@ public void render(DrawContext ctx, int mx, int my, float delta) {
     }
 
     @Override
-public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {}
-
+    public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {}
 }
